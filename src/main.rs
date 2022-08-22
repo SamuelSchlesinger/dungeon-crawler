@@ -130,6 +130,16 @@ fn setup(
         player_strength: 2,
     };
 
+    serde_json::to_writer(
+        std::fs::File::options()
+            .write(true)
+            .create(true)
+            .open("map.json")
+            .unwrap(),
+        &test_map,
+    )
+    .unwrap();
+
     commands
         .spawn_bundle(Camera2dBundle::default())
         .insert(Camera);
