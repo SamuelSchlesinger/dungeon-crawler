@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug)]
+use std::collections::BTreeSet;
+
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -22,20 +24,29 @@ impl From<Vec2> for Position {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
+pub struct WakeZone(pub BTreeSet<(i32, i32)>);
+
+#[derive(Component, Debug)]
+pub struct Awake(pub bool);
+
+#[derive(Component, Debug)]
 pub struct ZLevel(pub f32);
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct SpriteIndex(pub usize);
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Tile;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Enemy;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Player;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Camera;
+
+#[derive(Component, Debug)]
+pub struct Passable(pub bool);

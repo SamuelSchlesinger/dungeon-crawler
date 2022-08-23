@@ -3,6 +3,8 @@ mod components;
 mod map;
 mod resources;
 
+use std::collections::BTreeSet;
+
 use bevy::{prelude::*, time::FixedTimestep};
 use components::*;
 use itertools::Itertools;
@@ -21,6 +23,7 @@ fn main() {
         )
         .add_system(move_camera)
         .add_system(move_player)
+        .add_system(change_sprite_for_awake_enemies)
         .add_system(track_mouse_movement)
         .add_system(mouse_button_handler)
         .run();
@@ -82,6 +85,17 @@ fn mouse_button_handler(
     }
 }
 
+fn change_sprite_for_awake_enemies(mut query: Query<(&mut SpriteIndex, &Awake), With<Enemy>>) {
+    for (mut sprite_index, awake) in query.iter_mut() {
+        println!("{:?}, {:?}", sprite_index, awake);
+        if awake.0 {
+            sprite_index.0 = 141;
+        } else {
+            sprite_index.0 = 74;
+        }
+    }
+}
+
 fn animate_sprites(
     mut query: Query<(
         &mut Transform,
@@ -134,8 +148,14 @@ fn move_camera(
     }
 }
 
-fn move_player(mut query: Query<&mut Position, With<Player>>, keyboard_input: Res<Input<KeyCode>>) {
-    if let Some(mut position) = query.iter_mut().next() {
+fn move_player(
+    mut query: Query<(Entity, &mut Position), With<Player>>,
+    mut enemies: Query<(&WakeZone, &mut Awake), With<Enemy>>,
+    entities: Query<(Entity, &Position, &Passable), Without<Player>>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    if let Some((entity, mut position)) = query.iter_mut().next() {
+        let old_position = position.clone();
         if keyboard_input.just_pressed(KeyCode::A) {
             position.x -= 1;
         }
@@ -148,6 +168,21 @@ fn move_player(mut query: Query<&mut Position, With<Player>>, keyboard_input: Re
         if keyboard_input.just_pressed(KeyCode::S) {
             position.y -= 1;
         }
+
+        for (other_entity, other_position, passable) in entities.iter() {
+            if other_entity != entity {
+                if *other_position == *position && !passable.0 {
+                    *position = old_position;
+                    return;
+                }
+            }
+        }
+
+        for (wake_zone, mut wake) in enemies.iter_mut() {
+            if wake_zone.0.contains(&(position.x, position.y)) {
+                wake.0 = true;
+            }
+        }
     }
 }
 
@@ -156,6 +191,10 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
+    let border_tile = map::Tile {
+        sprite_index: 15 * 64 - 13,
+        passable: false,
+    };
     let test_map = map::Map {
         player_sprite: 71,
         rooms: vec![map::Room {
@@ -171,6 +210,10 @@ fn setup(
                         },
                     )
                 })
+                .chain((-10..=10).map(|i| ((i, 10), border_tile.clone())))
+                .chain((-10..=10).map(|i| ((i, -10), border_tile.clone())))
+                .chain((-10..=10).map(|i| ((-10, -i), border_tile.clone())))
+                .chain((-10..=10).map(|i| ((10, i), border_tile.clone())))
                 .collect(),
             enemies: vec![(
                 (5, 5),
@@ -178,6 +221,10 @@ fn setup(
                     sprite_index: 74,
                     health: 10,
                     strength: 5,
+                    wake_zone: (-3..3)
+                        .cartesian_product(-3..3)
+                        .map(|(i, j)| (5 + i, 5 + j))
+                        .collect::<BTreeSet<_>>(),
                 },
             )]
             .into_iter()
@@ -232,6 +279,7 @@ fn setup(
                 ..default()
             })
             .insert(Position { x: *x, y: *y })
+            .insert(Passable(tile.passable))
             .insert(Tile)
             .insert(SpriteIndex(tile.sprite_index as usize))
             .insert(ZLevel(0.))
@@ -260,6 +308,9 @@ fn setup(
                 ..default()
             })
             .insert(Position { x: *x, y: *y })
+            .insert(Passable(false))
+            .insert(WakeZone(enemy.wake_zone.clone()))
+            .insert(Awake(false))
             .insert(Enemy)
             .insert(SpriteIndex(enemy.sprite_index as usize))
             .insert(ZLevel(0.01))
@@ -289,6 +340,7 @@ fn setup(
             y: room.initial_position.1,
         })
         .insert(Player)
+        .insert(Passable(false))
         .insert(SpriteIndex(test_map.player_sprite as usize))
         .insert(ZLevel(0.02));
 }

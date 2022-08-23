@@ -1,7 +1,6 @@
-use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct Room {
@@ -21,6 +20,7 @@ pub struct Enemy {
     pub sprite_index: u32,
     pub health: u32,
     pub strength: u32,
+    pub wake_zone: BTreeSet<(i32, i32)>,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
