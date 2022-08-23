@@ -21,7 +21,65 @@ fn main() {
         )
         .add_system(move_camera)
         .add_system(move_player)
+        .add_system(track_mouse_movement)
+        .add_system(mouse_button_handler)
         .run();
+}
+
+fn track_mouse_movement(
+    mut cursor_moved_event_reader: EventReader<CursorMoved>,
+    mut mouse_position: ResMut<MousePosition>,
+) {
+    if let Some(cursor_moved) = cursor_moved_event_reader.iter().last() {
+        *mouse_position = MousePosition(cursor_moved.position);
+    }
+}
+
+fn convert_mouse_position_to_world_coordinates(
+    window: &Window,
+    transform: &Transform,
+    scaling_factor: f32,
+    mouse_position: Vec2,
+) -> Vec2 {
+    Vec2::new(
+        transform.translation.x / scaling_factor
+            + (mouse_position.x - window.width() / 2.) / scaling_factor,
+        transform.translation.y / scaling_factor
+            + (mouse_position.y - window.height() / 2.) / scaling_factor,
+    )
+}
+
+fn mouse_button_handler(
+    windows: Res<Windows>,
+    mouse_button: Res<Input<MouseButton>>,
+    mouse_position: Res<MousePosition>,
+    scale_factor: Res<ScaleFactor>,
+    camera: Query<&Transform, With<Camera>>,
+    tiles: Res<Tiles>,
+    mut commands: Commands,
+) {
+    if let Some(transform) = camera.iter().next() {
+        if let Some(window) = windows.get_primary() {
+            if mouse_button.just_pressed(MouseButton::Left) {
+                let coordinates = convert_mouse_position_to_world_coordinates(
+                    window,
+                    transform,
+                    scale_factor.0,
+                    mouse_position.0,
+                );
+                let position = Position::from(coordinates);
+                if let Some(tile_entity) = tiles.get(&(position.x, position.y)) {
+                    let mut ent = commands.entity(tile_entity);
+                    ent.remove::<SpriteIndex>();
+                    ent.insert(SpriteIndex(64 * 10 + 4));
+                }
+                println!("{:?} at {:?}", position, coordinates);
+            } else if mouse_button.just_pressed(MouseButton::Right) {
+            } else if mouse_button.just_pressed(MouseButton::Middle) {
+            } else {
+            }
+        }
+    }
 }
 
 fn animate_sprites(
@@ -36,8 +94,8 @@ fn animate_sprites(
 ) {
     for (mut transform, mut sprite, pos, zlevel, sprite_index) in query.iter_mut() {
         *transform = Transform::from_xyz(
-            pos.x as f32 * scale_factor.0,
-            pos.y as f32 * scale_factor.0,
+            (pos.x as f32 - 0.5) * scale_factor.0,
+            (pos.y as f32 - 0.5) * scale_factor.0,
             zlevel.0,
         );
         sprite.index = sprite_index.0;
@@ -145,20 +203,24 @@ fn setup(
         .insert(Camera);
 
     commands.insert_resource(ScaleFactor(SCALE_FACTOR));
+    commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
 
     let tiles_texture_handle = asset_server.load("tiles.png");
     let tiles_texture_atlas =
         TextureAtlas::from_grid(tiles_texture_handle, Vec2::new(32., 32.), 64, 48);
     let tiles_texture_handle = texture_atlases.add(tiles_texture_atlas);
 
+    commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
+
     let room = test_map.rooms[test_map.initial_room as usize].clone();
+    let mut tiles = Tiles::new();
 
     for ((x, y), tile) in (&room.tiles).into_iter() {
-        commands
+        let id = commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform::from_xyz(
-                    *x as f32 * SCALE_FACTOR,
-                    *y as f32 * SCALE_FACTOR,
+                    (*x as f32 - 0.5) * SCALE_FACTOR,
+                    (*y as f32 - 0.5) * SCALE_FACTOR,
                     0.,
                 ),
                 texture_atlas: tiles_texture_handle.clone(),
@@ -172,15 +234,21 @@ fn setup(
             .insert(Position { x: *x, y: *y })
             .insert(Tile)
             .insert(SpriteIndex(tile.sprite_index as usize))
-            .insert(ZLevel(0.));
+            .insert(ZLevel(0.))
+            .id();
+        tiles.insert((*x, *y), id);
     }
 
+    commands.insert_resource(tiles);
+
+    let mut enemies = Enemies::new();
+
     for ((x, y), enemy) in (&room.enemies).into_iter() {
-        commands
+        let id = commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform::from_xyz(
-                    *x as f32 * SCALE_FACTOR,
-                    *y as f32 * SCALE_FACTOR,
+                    (*x as f32 - 0.5) * SCALE_FACTOR,
+                    (*y as f32 - 0.5) * SCALE_FACTOR,
                     0.01,
                 ),
                 texture_atlas: tiles_texture_handle.clone(),
@@ -194,13 +262,18 @@ fn setup(
             .insert(Position { x: *x, y: *y })
             .insert(Enemy)
             .insert(SpriteIndex(enemy.sprite_index as usize))
-            .insert(ZLevel(0.01));
+            .insert(ZLevel(0.01))
+            .id();
+        enemies.insert((*x, *y), id);
     }
+
+    commands.insert_resource(enemies);
+
     commands
         .spawn_bundle(SpriteSheetBundle {
             transform: Transform::from_xyz(
-                room.initial_position.0 as f32 * SCALE_FACTOR,
-                room.initial_position.1 as f32 * SCALE_FACTOR,
+                (room.initial_position.0 as f32 - 0.5) * SCALE_FACTOR,
+                (room.initial_position.1 as f32 - 0.5) * SCALE_FACTOR,
                 0.02,
             ),
             texture_atlas: tiles_texture_handle.clone(),
