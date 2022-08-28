@@ -8,6 +8,7 @@ mod set_follow;
 mod set_visibility;
 mod setup;
 mod track_mouse_movement;
+mod walk_enemies;
 
 pub use animate_sprites::animate_sprites;
 pub use change_sprite_for_awake_enemies::change_sprite_for_awake_enemies;
@@ -19,3 +20,4 @@ pub use set_follow::set_follow;
 pub use set_visibility::set_visibility;
 pub use setup::setup;
 pub use track_mouse_movement::track_mouse_movement;
+pub use walk_enemies::walk_enemies;

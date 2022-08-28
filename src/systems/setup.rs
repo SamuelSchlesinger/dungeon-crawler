@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::collections::VecDeque;
 
 use bevy::prelude::*;
 
@@ -100,7 +101,7 @@ fn make_test_map() -> map::Map {
 fn initialize_resources(commands: &mut Commands) {
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
-    commands.insert_resource(ClearColor(Color::rgb(0., 0., 0.)));
+    commands.insert_resource(ClearColor(Color::rgb(1., 1., 1.)));
 }
 
 fn create_camera(commands: &mut Commands, initial_position: (i32, i32, i32)) {
@@ -113,9 +114,7 @@ fn create_camera(commands: &mut Commands, initial_position: (i32, i32, i32)) {
                 0.,
             ),
     );
-    commands
-        .spawn_bundle(Camera2dBundle::default())
-        .insert(Camera);
+    commands.spawn_bundle(camera_2d_bundle).insert(Camera);
 }
 
 fn get_tiles_texture_handle(
@@ -157,7 +156,7 @@ pub fn setup(
     let mut tiles = Tiles::new();
 
     for ((x, y, z), tile) in (&room.tiles).into_iter() {
-        let id = commands
+        let entity = commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform::from_xyz(
                     (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
@@ -185,7 +184,13 @@ pub fn setup(
             .insert(SpriteIndex(tile.sprite_index as usize))
             .insert(ZLevel(0.))
             .id();
-        tiles.insert((*x, *y, *z), id);
+        tiles.insert(
+            (*x, *y, *z),
+            CachedTile {
+                entity,
+                passable: tile.passable,
+            },
+        );
     }
 
     commands.insert_resource(tiles);
@@ -215,6 +220,17 @@ pub fn setup(
                 x: *x,
                 y: *y,
                 z: *z,
+            })
+            .insert(MovementPath {
+                vertices: Some(
+                    (0..=10i32)
+                        .map(|i| Position {
+                            x: 4 - i,
+                            y: 5,
+                            z: 0,
+                        })
+                        .collect::<VecDeque<_>>(),
+                ),
             })
             .insert(Passable(false))
             .insert(WakeZone(enemy.wake_zone.clone()))

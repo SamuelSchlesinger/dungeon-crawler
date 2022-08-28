@@ -1,12 +1,23 @@
 use bevy::prelude::*;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, VecDeque};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct MovementPath {
+    pub vertices: Option<VecDeque<Position>>,
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
     pub z: i32,
+}
+
+impl Position {
+    pub fn is_adjacent_to(self, other: Position) -> bool {
+        self.x.abs_diff(other.x) + self.y.abs_diff(other.y) + self.z.abs_diff(other.z) == 1
+    }
 }
 
 impl From<Vec3> for Position {
@@ -52,3 +63,10 @@ pub struct Camera;
 
 #[derive(Component, Debug)]
 pub struct Passable(pub bool);
+
+#[test]
+fn test_adjacency() {
+    let position = Position { x: 5, y: 5, z: 0 };
+    let other = Position { x: 4, y: 5, z: 0 };
+    assert!(position.is_adjacent_to(other));
+}

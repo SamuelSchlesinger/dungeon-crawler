@@ -18,6 +18,12 @@ fn main() {
                 .with_run_criteria(FixedTimestep::steps_per_second(60.))
                 .with_system(animate_sprites),
         )
+        .add_system_set(
+            SystemSet::new()
+                .with_run_criteria(FixedTimestep::steps_per_second(2.))
+                .with_system(walk_enemies)
+                .after(setup),
+        )
         .add_system(move_camera)
         .add_system(move_player)
         .add_system(set_visibility)
