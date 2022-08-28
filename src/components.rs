@@ -6,10 +6,11 @@ use std::collections::BTreeSet;
 pub struct Position {
     pub x: i32,
     pub y: i32,
+    pub z: i32,
 }
 
-impl From<Vec2> for Position {
-    fn from(v: Vec2) -> Self {
+impl From<Vec3> for Position {
+    fn from(v: Vec3) -> Self {
         fn convert(f: f32) -> i32 {
             if f < 0. {
                 -(-f as i32)
@@ -20,12 +21,13 @@ impl From<Vec2> for Position {
         Position {
             x: convert(v.x),
             y: convert(v.y),
+            z: convert(v.z),
         }
     }
 }
 
 #[derive(Component, Debug)]
-pub struct WakeZone(pub BTreeSet<(i32, i32)>);
+pub struct WakeZone(pub BTreeSet<(i32, i32, i32)>);
 
 #[derive(Component, Debug)]
 pub struct Awake(pub bool);

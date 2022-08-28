@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::components::*;
-use crate::resources::*;
 
 pub fn move_player(
     mut query: Query<(Entity, &mut Position), With<Player>>,
@@ -23,6 +22,12 @@ pub fn move_player(
         if keyboard_input.just_pressed(KeyCode::S) {
             position.y -= 1;
         }
+        if keyboard_input.just_pressed(KeyCode::E) {
+            position.z += 1;
+        }
+        if keyboard_input.just_pressed(KeyCode::Q) {
+            position.z -= 1;
+        }
 
         for (other_entity, other_position, passable) in entities.iter() {
             if other_entity != entity {
@@ -34,7 +39,7 @@ pub fn move_player(
         }
 
         for (wake_zone, mut wake) in enemies.iter_mut() {
-            if wake_zone.0.contains(&(position.x, position.y)) {
+            if wake_zone.0.contains(&(position.x, position.y, position.z)) {
                 wake.0 = true;
             }
         }

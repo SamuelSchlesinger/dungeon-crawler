@@ -1,8 +1,10 @@
 mod combat;
 mod components;
+mod events;
 mod map;
 mod resources;
 mod systems;
+mod utils;
 
 use bevy::{prelude::*, time::FixedTimestep};
 use systems::*;
@@ -21,5 +23,6 @@ fn main() {
         .add_system(change_sprite_for_awake_enemies)
         .add_system(track_mouse_movement)
         .add_system(mouse_button_handler)
+        .add_system(set_visibility)
         .run();
 }

@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct Room {
-    pub initial_position: (i32, i32),
+    pub initial_position: (i32, i32, i32),
     pub tiles: PositionMap<Tile>,
     pub enemies: PositionMap<Enemy>,
 }
@@ -20,7 +20,7 @@ pub struct Enemy {
     pub sprite_index: u32,
     pub health: u32,
     pub strength: u32,
-    pub wake_zone: BTreeSet<(i32, i32)>,
+    pub wake_zone: BTreeSet<(i32, i32, i32)>,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
@@ -36,12 +36,12 @@ pub struct Map {
 }
 
 #[derive(PartialEq, Eq, Clone)]
-pub struct PositionMap<A>(BTreeMap<(i32, i32), A>);
+pub struct PositionMap<A>(BTreeMap<(i32, i32, i32), A>);
 
 impl<'a, A> IntoIterator for &'a PositionMap<A> {
-    type Item = (&'a (i32, i32), &'a A);
+    type Item = (&'a (i32, i32, i32), &'a A);
 
-    type IntoIter = std::collections::btree_map::Iter<'a, (i32, i32), A>;
+    type IntoIter = std::collections::btree_map::Iter<'a, (i32, i32, i32), A>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
@@ -49,17 +49,17 @@ impl<'a, A> IntoIterator for &'a PositionMap<A> {
 }
 
 impl<A> IntoIterator for PositionMap<A> {
-    type Item = ((i32, i32), A);
+    type Item = ((i32, i32, i32), A);
 
-    type IntoIter = std::collections::btree_map::IntoIter<(i32, i32), A>;
+    type IntoIter = std::collections::btree_map::IntoIter<(i32, i32, i32), A>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
-impl<A> FromIterator<((i32, i32), A)> for PositionMap<A> {
-    fn from_iter<T: IntoIterator<Item = ((i32, i32), A)>>(iter: T) -> Self {
+impl<A> FromIterator<((i32, i32, i32), A)> for PositionMap<A> {
+    fn from_iter<T: IntoIterator<Item = ((i32, i32, i32), A)>>(iter: T) -> Self {
         PositionMap(FromIterator::from_iter(iter))
     }
 }
@@ -72,7 +72,7 @@ impl<A: Serialize + Clone> Serialize for PositionMap<A> {
         let v: Vec<_> = self
             .0
             .iter()
-            .map(|((i, j), a)| ((*i, *j), a.clone()))
+            .map(|((i, j, k), a)| ((*i, *j, *k), a.clone()))
             .collect();
         v.serialize(serializer)
     }
