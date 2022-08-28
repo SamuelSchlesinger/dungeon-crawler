@@ -79,7 +79,16 @@ fn initialize_resources(commands: &mut Commands) {
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
 }
 
-fn create_camera(commands: &mut Commands) {
+fn create_camera(commands: &mut Commands, initial_position: (i32, i32, i32)) {
+    let mut camera_2d_bundle = Camera2dBundle::default();
+    camera_2d_bundle.transform = camera_2d_bundle.transform.with_translation(
+        camera_2d_bundle.transform.translation
+            + Vec3::new(
+                initial_position.0 as f32 * INITIAL_SCALE_FACTOR,
+                initial_position.1 as f32 * INITIAL_SCALE_FACTOR,
+                0.,
+            ),
+    );
     commands
         .spawn_bundle(Camera2dBundle::default())
         .insert(Camera);
@@ -102,15 +111,17 @@ pub fn setup(
 ) {
     let test_map = make_test_map();
 
-    create_camera(&mut commands);
-
-    initialize_resources(&mut commands);
+    commands.insert_resource(Follow(false));
 
     let initial_position = test_map
         .rooms
         .get(test_map.initial_room as usize)
         .unwrap()
         .initial_position;
+
+    create_camera(&mut commands, initial_position);
+
+    initialize_resources(&mut commands);
 
     commands.insert_resource(Floor(initial_position.2));
 

@@ -18,3 +18,19 @@ pub fn convert_mouse_position_to_world_coordinates(
     )
     .into()
 }
+
+pub fn move_camera_2d(transform: &mut Transform, scale_factor: f32, by: KeyCode) {
+    pub fn f(transform: &mut Transform, by: Vec3) {
+        *transform = transform.with_translation(transform.translation + by);
+    }
+    pub fn g(k: KeyCode, scale_factor: f32) -> Vec3 {
+        match k {
+            KeyCode::Left => Vec3::new(-scale_factor, 0., 0.),
+            KeyCode::Right => Vec3::new(scale_factor, 0., 0.),
+            KeyCode::Up => Vec3::new(0., scale_factor, 0.),
+            KeyCode::Down => Vec3::new(0., -scale_factor, 0.),
+            _ => Vec3::new(0., 0., 0.),
+        }
+    }
+    f(transform, g(by, scale_factor));
+}

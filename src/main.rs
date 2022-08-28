@@ -20,9 +20,11 @@ fn main() {
         )
         .add_system(move_camera)
         .add_system(move_player)
+        .add_system(set_visibility)
+        .add_system(set_follow)
+        .add_system(follow)
         .add_system(change_sprite_for_awake_enemies)
         .add_system(track_mouse_movement)
         .add_system(mouse_button_handler)
-        .add_system(set_visibility)
         .run();
 }

@@ -3,6 +3,9 @@ use std::collections::BTreeMap;
 use bevy::prelude::*;
 
 #[derive(Debug)]
+pub struct Follow(pub bool);
+
+#[derive(Debug)]
 pub struct Floor(pub i32);
 
 #[derive(Debug)]
