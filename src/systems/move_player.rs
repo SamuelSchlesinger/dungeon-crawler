@@ -8,6 +8,7 @@ pub fn move_player(
     mut enemies: Query<(&WakeZone, &mut Awake), With<Enemy>>,
     follow: Res<Follow>,
     scale_factor: Res<ScaleFactor>,
+    tiles: Res<Tiles>,
     mut floor: ResMut<Floor>,
     mut camera_query: Query<&mut Transform, With<Camera>>,
     entities: Query<(Entity, &Position, &Passable), Without<Player>>,
@@ -35,6 +36,12 @@ pub fn move_player(
             }
         }
 
+        if let Some(_tile) = tiles.get(&(position.x, position.y, position.z)) {
+        } else {
+            *position = old_position;
+            return;
+        }
+
         for (other_entity, other_position, passable) in entities.iter() {
             if other_entity != entity {
                 if *other_position == *position && !passable.0 {
@@ -52,7 +59,7 @@ pub fn move_player(
 
         if *position != old_position && follow.0 {
             floor.0 = position.z;
-            transform.map(|mut transform| {
+            camera_query.iter_mut().next().map(|mut transform| {
                 *transform = transform.with_translation(Vec3::new(
                     (position.x as f32) * scale_factor.0,
                     (position.y as f32) * scale_factor.0,

@@ -19,10 +19,17 @@ fn make_test_map() -> map::Map {
         player_sprite: 71,
         rooms: vec![map::Room {
             initial_position: (1, 1, 0),
-            tiles: (-10..10)
-                .cartesian_product(-10..10)
-                .cartesian_product(-10..10)
-                .map(|((i, j), k)| (i, j, k))
+            tiles: (-10i32..10)
+                .flat_map(|k| {
+                    (-(10 - k.abs())..(10 - k.abs()))
+                        .map(|j| (k, j))
+                        .collect::<Vec<_>>()
+                })
+                .flat_map(|(k, j)| {
+                    (-(10 - k.abs())..(10 - k.abs()))
+                        .map(|i| (i, j, k))
+                        .collect::<Vec<_>>()
+                })
                 .map(|(i, j, k)| {
                     (
                         (i, j, k),
@@ -33,24 +40,40 @@ fn make_test_map() -> map::Map {
                     )
                 })
                 .chain(
-                    (-10..=10)
-                        .cartesian_product(-10..=10)
-                        .map(|(i, k)| ((i, 10, k), border_tile.clone())),
+                    (-10i32..=10)
+                        .flat_map(|k| {
+                            (-(10 - k.abs())..=(10 - k.abs()))
+                                .map(|i| (i, k))
+                                .collect::<Vec<_>>()
+                        })
+                        .map(|(i, k)| ((i, 10 - k.abs(), k), border_tile.clone())),
                 )
                 .chain(
-                    (-10..=10)
-                        .cartesian_product(-10..=10)
-                        .map(|(i, k)| ((i, -10, k), border_tile.clone())),
+                    (-10i32..=10)
+                        .flat_map(|k| {
+                            (-(10 - k.abs())..=(10 - k.abs()))
+                                .map(|i| (i, k))
+                                .collect::<Vec<_>>()
+                        })
+                        .map(|(i, k)| ((i, -(10 - k.abs()), k), border_tile.clone())),
                 )
                 .chain(
-                    (-10..=10)
-                        .cartesian_product(-10..=10)
-                        .map(|(i, k)| ((-10, -i, k), border_tile.clone())),
+                    (-10i32..=10)
+                        .flat_map(|k| {
+                            (-(10 - k.abs())..=(10 - k.abs()))
+                                .map(|i| (i, k))
+                                .collect::<Vec<_>>()
+                        })
+                        .map(|(i, k)| ((-(10 - k.abs()), -i, k), border_tile.clone())),
                 )
                 .chain(
-                    (-10..=10)
-                        .cartesian_product(-10..=10)
-                        .map(|(i, k)| ((10, i, k), border_tile.clone())),
+                    (-10i32..=10)
+                        .flat_map(|k| {
+                            (-(10 - k.abs())..=(10 - k.abs()))
+                                .map(|i| (i, k))
+                                .collect::<Vec<_>>()
+                        })
+                        .map(|(i, k)| ((10 - k.abs(), i, k), border_tile.clone())),
                 )
                 .collect(),
             enemies: vec![(
@@ -77,6 +100,7 @@ fn make_test_map() -> map::Map {
 fn initialize_resources(commands: &mut Commands) {
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
+    commands.insert_resource(ClearColor(Color::rgb(0., 0., 0.)));
 }
 
 fn create_camera(commands: &mut Commands, initial_position: (i32, i32, i32)) {
