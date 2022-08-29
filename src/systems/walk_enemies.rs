@@ -30,7 +30,6 @@ pub fn walk_enemies(
             if awake.0 {
                 movement_path.vertices =
                     find_shortest_path(&tiles, &enemy_positions, *position, *player_position);
-                println!("movement_path.vertices: {:?}", movement_path.vertices);
             }
             match &mut movement_path.vertices {
                 Some(ref mut path) => match path.pop_front() {
@@ -150,16 +149,6 @@ fn find_shortest_path(
             }
         }
     }
-
-    let non_infinite_distances: BTreeMap<Position, i32> = distances_from_start
-        .iter()
-        .filter_map(|(pos, wi)| match wi {
-            WithInfinity::Infinity => None,
-            WithInfinity::Normal(i) => Some((*pos, *i)),
-        })
-        .collect();
-
-    println!("{:?}", non_infinite_distances);
 
     match distances_from_start.get(&ending_position) {
         Some(WithInfinity::Infinity) => None,

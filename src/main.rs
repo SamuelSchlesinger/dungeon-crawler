@@ -15,7 +15,8 @@ fn main() {
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(60.))
-                .with_system(animate_sprites),
+                .with_system(animate_sprites)
+                .with_system(display_health.after(animate_sprites)),
         )
         .add_system_set(
             SystemSet::new()
