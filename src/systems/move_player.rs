@@ -43,11 +43,9 @@ pub fn move_player(
         }
 
         for (other_entity, other_position, passable) in entities.iter() {
-            if other_entity != entity {
-                if *other_position == *position && !passable.0 {
-                    *position = old_position;
-                    return;
-                }
+            if other_entity != entity && *other_position == *position && !passable.0 {
+                *position = old_position;
+                return;
             }
         }
 

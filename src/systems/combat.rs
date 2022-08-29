@@ -29,7 +29,7 @@ pub fn combat(
         return;
     }
 
-    for (_entity, ref enemy_strength, _enemy_position, _enemy_health) in enemies.iter_mut() {
+    for (_entity, enemy_strength, _enemy_position, _enemy_health) in enemies.iter_mut() {
         player_health.0 -= enemy_strength.0;
     }
 

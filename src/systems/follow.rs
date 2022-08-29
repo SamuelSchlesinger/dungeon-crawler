@@ -10,7 +10,7 @@ pub fn follow(
     mut player_query: Query<&Position, With<Player>>,
     mut camera_query: Query<&mut Transform, With<Camera>>,
 ) {
-    if follow.0 {
+    if let Some((mut transform, position)) = if follow.0 {
         camera_query.iter_mut().next().and_then(|transform| {
             player_query
                 .iter_mut()
@@ -19,13 +19,12 @@ pub fn follow(
         })
     } else {
         None
-    }
-    .map(|(mut transform, position)| {
+    } {
         floor.0 = position.z;
         *transform = transform.with_translation(Vec3::new(
             (position.x as f32) * scale_factor.0,
             (position.y as f32) * scale_factor.0,
             1.,
         ));
-    });
+    }
 }

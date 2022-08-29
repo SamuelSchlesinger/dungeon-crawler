@@ -33,8 +33,6 @@ fn main() {
                 .with_system(combat),
         )
         .add_system(follow)
-        .add_system(change_sprite_for_awake_enemies)
         .add_system(track_mouse_movement)
-        .add_system(mouse_button_handler)
         .run();
 }

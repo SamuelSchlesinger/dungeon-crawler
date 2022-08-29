@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use crate::components::*;
 use crate::resources::*;
 
 pub fn track_mouse_movement(
