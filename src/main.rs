@@ -1,4 +1,3 @@
-mod combat;
 mod components;
 mod events;
 mod map;
@@ -28,6 +27,11 @@ fn main() {
         .add_system(move_player)
         .add_system(set_visibility)
         .add_system(set_follow)
+        .add_system_set(
+            SystemSet::new()
+                .with_run_criteria(FixedTimestep::steps_per_second(10.))
+                .with_system(combat),
+        )
         .add_system(follow)
         .add_system(change_sprite_for_awake_enemies)
         .add_system(track_mouse_movement)

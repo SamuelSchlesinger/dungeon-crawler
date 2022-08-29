@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::BinaryHeap;
 use std::collections::VecDeque;
 use std::ops::Add;
 
@@ -16,32 +15,34 @@ pub fn walk_enemies(
     mut enemies: Query<(&mut Position, &Awake, &mut MovementPath), (With<Enemy>, Without<Player>)>,
     player: Query<&Position, With<Player>>,
 ) {
-    println!("Walking enemies");
-    for (mut position, awake, mut movement_path) in enemies.iter_mut() {
-        if awake.0 {
-            if let Some(player_position) = player.iter().next() {
+    if let Some(player_position) = player.iter().next() {
+        for (mut position, awake, mut movement_path) in enemies.iter_mut() {
+            if position.is_adjacent_to(*player_position) {
+                return;
+            }
+            if awake.0 {
                 movement_path.vertices = find_shortest_path(&tiles, *position, *player_position);
                 println!("movement_path.vertices: {:?}", movement_path.vertices);
             }
-        }
-        match &mut movement_path.vertices {
-            Some(ref mut path) => match path.pop_front() {
-                Some(next_vertex) => {
-                    let adjacency = position.is_adjacent_to(next_vertex);
-                    let next_vertex_is_passable = tiles
-                        .get(&(next_vertex.x, next_vertex.y, next_vertex.z))
-                        .map_or_else(|| false, |cached_tile| cached_tile.passable);
-                    if adjacency && next_vertex_is_passable {
-                        *position = next_vertex;
-                    } else {
+            match &mut movement_path.vertices {
+                Some(ref mut path) => match path.pop_front() {
+                    Some(next_vertex) => {
+                        let adjacency = position.is_adjacent_to(next_vertex);
+                        let next_vertex_is_passable = tiles
+                            .get(&(next_vertex.x, next_vertex.y, next_vertex.z))
+                            .map_or_else(|| false, |cached_tile| cached_tile.passable);
+                        if adjacency && next_vertex_is_passable {
+                            *position = next_vertex;
+                        } else {
+                            movement_path.vertices = None;
+                        }
+                    }
+                    None => {
                         movement_path.vertices = None;
                     }
-                }
-                None => {
-                    movement_path.vertices = None;
-                }
-            },
-            None => {}
+                },
+                None => {}
+            }
         }
     }
 }

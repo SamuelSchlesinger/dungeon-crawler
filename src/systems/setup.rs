@@ -81,7 +81,7 @@ fn make_test_map() -> map::Map {
                 (5, 5, 0),
                 map::Enemy {
                     sprite_index: 74,
-                    health: 10,
+                    health: 100,
                     strength: 5,
                     wake_zone: (-3..3)
                         .cartesian_product(-3..3)
@@ -93,7 +93,7 @@ fn make_test_map() -> map::Map {
             .collect(),
         }],
         initial_room: 0,
-        player_health: 100,
+        player_health: 1000,
         player_strength: 2,
     }
 }
@@ -225,6 +225,8 @@ pub fn setup(
             .insert(Passable(false))
             .insert(WakeZone(enemy.wake_zone.clone()))
             .insert(Awake(false))
+            .insert(Health(enemy.health as i32))
+            .insert(Strength(enemy.strength as i32))
             .insert(Enemy)
             .insert(SpriteIndex(enemy.sprite_index as usize))
             .insert(ZLevel(0.01))
@@ -256,6 +258,8 @@ pub fn setup(
             z: room.initial_position.2,
         })
         .insert(Player)
+        .insert(Health(test_map.player_health as i32))
+        .insert(Strength(test_map.player_strength as i32))
         .insert(Passable(false))
         .insert(SpriteIndex(test_map.player_sprite as usize))
         .insert(ZLevel(0.02));

@@ -1,5 +1,6 @@
 mod animate_sprites;
 mod change_sprite_for_awake_enemies;
+mod combat;
 mod follow;
 mod mouse_button_handler;
 mod move_camera;
@@ -12,6 +13,7 @@ mod walk_enemies;
 
 pub use animate_sprites::animate_sprites;
 pub use change_sprite_for_awake_enemies::change_sprite_for_awake_enemies;
+pub use combat::combat;
 pub use follow::follow;
 pub use mouse_button_handler::mouse_button_handler;
 pub use move_camera::move_camera;

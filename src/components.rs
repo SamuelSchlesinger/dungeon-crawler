@@ -8,6 +8,12 @@ pub struct MovementPath {
     pub vertices: Option<VecDeque<Position>>,
 }
 
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct Strength(pub i32);
+
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct Health(pub i32);
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     pub x: i32,
