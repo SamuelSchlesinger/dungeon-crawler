@@ -23,12 +23,44 @@ impl Position {
     pub fn adjacent(self) -> Box<dyn Iterator<Item = Position>> {
         Box::new(
             (-1..=1)
-                .cartesian_product(-1..1)
-                .cartesian_product(-1..1)
-                .map(|((x, y), z)| Position { x, y, z })
+                .cartesian_product(-1..=1)
+                .cartesian_product(-1..=1)
+                .map(move |((dx, dy), dz)| Position {
+                    x: self.x + dx,
+                    y: self.y + dy,
+                    z: self.z + dz,
+                })
                 .filter(move |pos| self.is_adjacent_to(*pos)),
         )
     }
+}
+
+#[test]
+fn position_adjacency_test() {
+    let a = Position { x: 1, y: 1, z: 1 };
+    let b = Position { x: 2, ..a };
+    assert!(a.is_adjacent_to(b));
+    let c = Position { y: 2, ..a };
+    assert!(a.is_adjacent_to(c));
+    let d = Position { z: 2, ..a };
+    assert!(a.is_adjacent_to(d));
+    let e = Position { y: 2, ..b };
+    assert!(!a.is_adjacent_to(e));
+    let f = Position { z: 2, ..b };
+    assert!(!a.is_adjacent_to(f));
+
+    let adjacent_results: BTreeSet<Position> = a.adjacent().collect();
+    let ground_truth: BTreeSet<Position> = vec![
+        Position { x: 2, y: 1, z: 1 },
+        Position { x: 0, y: 1, z: 1 },
+        Position { x: 1, y: 2, z: 1 },
+        Position { x: 1, y: 0, z: 1 },
+        Position { x: 1, y: 1, z: 2 },
+        Position { x: 1, y: 1, z: 0 },
+    ]
+    .into_iter()
+    .collect();
+    assert_eq!(adjacent_results, ground_truth);
 }
 
 impl From<Vec3> for Position {

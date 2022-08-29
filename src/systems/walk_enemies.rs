@@ -69,8 +69,11 @@ impl<I: Add<I, Output = I>> Add<WithInfinity<I>> for WithInfinity<I> {
 #[test]
 fn with_infinity_test() {
     let x = WithInfinity::Normal(1i32);
+    let z = WithInfinity::Normal(0i32);
     let y = WithInfinity::Infinity;
     assert!(y > x);
+    assert!(z < x);
+    assert!(x + z < y);
 }
 
 fn find_shortest_path(
@@ -115,10 +118,10 @@ fn find_shortest_path(
                     .filter(|v| all_passable_tile_positions.contains(v))
                 {
                     let alt = distance + WithInfinity::Normal(1);
-                    if alt < *distances_from_start.get(&position).expect("boo!") {
+                    if alt < *distances_from_start.get(&v).expect("boo!") {
                         distances_from_start.insert(position, alt);
                         predecessor.insert(v, Some(position));
-                        queue.change_priority(&v, alt);
+                        assert!(queue.change_priority(&v, alt).is_some());
                     }
                 }
             }
