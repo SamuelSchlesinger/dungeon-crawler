@@ -36,8 +36,10 @@ pub fn move_player(
             }
         }
 
-        if let Some(_tile) = tiles.get(&(position.x, position.y, position.z)) {
-        } else {
+        if tiles
+            .get(&(position.x, position.y, position.z))
+            .map_or_else(|| true, |cached_tile| !cached_tile.passable)
+        {
             *position = old_position;
             return;
         }

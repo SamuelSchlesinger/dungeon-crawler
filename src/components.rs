@@ -1,7 +1,13 @@
 use bevy::prelude::*;
 use itertools::Itertools;
 
-use std::collections::{BTreeSet, VecDeque};
+use std::{
+    collections::{BTreeSet, VecDeque},
+    ops::Add,
+};
+
+#[derive(Component, Debug)]
+pub struct TextOverEntity(pub Entity);
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct MovementPath {
@@ -82,6 +88,18 @@ impl From<Vec3> for Position {
             x: convert(v.x),
             y: convert(v.y),
             z: convert(v.z),
+        }
+    }
+}
+
+impl Add<Position> for Position {
+    type Output = Position;
+
+    fn add(self, rhs: Position) -> Self::Output {
+        Position {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
         }
     }
 }

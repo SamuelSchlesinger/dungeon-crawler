@@ -1,5 +1,6 @@
 mod animate_sprites;
 mod combat;
+mod display_health;
 mod follow;
 mod move_camera;
 mod move_player;
@@ -11,6 +12,7 @@ mod walk_enemies;
 
 pub use animate_sprites::animate_sprites;
 pub use combat::combat;
+pub use display_health::display_health;
 pub use follow::follow;
 pub use move_camera::move_camera;
 pub use move_player::move_player;

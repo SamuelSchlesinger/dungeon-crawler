@@ -102,7 +102,7 @@ fn make_test_map() -> map::Map {
 fn initialize_resources(commands: &mut Commands) {
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
-    commands.insert_resource(ClearColor(Color::rgb(1., 1., 1.)));
+    commands.insert_resource(ClearColor(Color::rgb(0., 0., 0.)));
 }
 
 fn create_camera(commands: &mut Commands, initial_position: (i32, i32, i32)) {
@@ -199,7 +199,7 @@ pub fn setup(
     let mut enemies = Enemies::new();
 
     for ((x, y, z), enemy) in (&room.enemies).into_iter() {
-        let id = commands
+        let enemy_id = commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform::from_xyz(
                     (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
@@ -232,12 +232,36 @@ pub fn setup(
             .insert(SpriteIndex(enemy.sprite_index as usize))
             .insert(ZLevel(0.01))
             .id();
-        enemies.insert((*x, *y, *z), id);
+
+        commands
+            .spawn_bundle(
+                TextBundle::from_section(
+                    format!("health: {}", enemy.health),
+                    TextStyle {
+                        font: asset_server.load("fonts/FreeMono.ttf"),
+                        font_size: 22.0,
+                        color: Color::GREEN,
+                    },
+                )
+                .with_text_alignment(TextAlignment::BOTTOM_RIGHT)
+                .with_style(Style {
+                    align_self: AlignSelf::FlexEnd,
+                    position_type: PositionType::Absolute,
+                    position: UiRect {
+                        bottom: Val::Px(*x as f32 - 10.),
+                        left: Val::Px(*y as f32 + INITIAL_SCALE_FACTOR),
+                        ..default()
+                    },
+                    ..default()
+                }),
+            )
+            .insert(TextOverEntity(enemy_id));
+        enemies.insert((*x, *y, *z), enemy_id);
     }
 
     commands.insert_resource(enemies);
 
-    commands
+    let player_id = commands
         .spawn_bundle(SpriteSheetBundle {
             transform: Transform::from_xyz(
                 (room.initial_position.0 as f32 - 0.5) * INITIAL_SCALE_FACTOR,
@@ -263,5 +287,30 @@ pub fn setup(
         .insert(Strength(test_map.player_strength as i32))
         .insert(Passable(false))
         .insert(SpriteIndex(test_map.player_sprite as usize))
-        .insert(ZLevel(0.02));
+        .insert(ZLevel(0.02))
+        .id();
+
+    commands
+        .spawn_bundle(
+            TextBundle::from_section(
+                format!("health: {}", test_map.player_health),
+                TextStyle {
+                    font: asset_server.load("fonts/FreeMono.ttf"),
+                    font_size: 22.0,
+                    color: Color::GREEN,
+                },
+            )
+            .with_text_alignment(TextAlignment::BOTTOM_RIGHT)
+            .with_style(Style {
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(10.),
+                    left: Val::Px(10.),
+                    ..default()
+                },
+                ..default()
+            }),
+        )
+        .insert(TextOverEntity(player_id));
 }

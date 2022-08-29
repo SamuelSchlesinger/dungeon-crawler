@@ -19,6 +19,24 @@ pub fn convert_mouse_position_to_world_coordinates(
     .into()
 }
 
+pub fn convert_world_coordinates_to_ui_position(
+    windows: &Windows,
+    transform: &Transform,
+    scale_factor: f32,
+    position: Position,
+) -> Vec2 {
+    if let Some(window) = windows.get_primary() {
+        Vec2::new(
+            (position.x as f32 - 0.5) * scale_factor - transform.translation.x
+                + window.width() / 2.,
+            (position.y as f32 - 0.5) * scale_factor - transform.translation.y
+                + window.height() / 2.,
+        )
+    } else {
+        return Vec2::default();
+    }
+}
+
 pub fn move_camera_2d(transform: &mut Transform, scale_factor: f32, by: KeyCode) {
     pub fn f(transform: &mut Transform, by: Vec3) {
         *transform = transform.with_translation(transform.translation + by);
