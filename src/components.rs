@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use itertools::Itertools;
 
 use std::collections::{BTreeSet, VecDeque};
 
@@ -7,7 +8,7 @@ pub struct MovementPath {
     pub vertices: Option<VecDeque<Position>>,
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -17,6 +18,16 @@ pub struct Position {
 impl Position {
     pub fn is_adjacent_to(self, other: Position) -> bool {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y) + self.z.abs_diff(other.z) == 1
+    }
+
+    pub fn adjacent(self) -> Box<dyn Iterator<Item = Position>> {
+        Box::new(
+            (-1..=1)
+                .cartesian_product(-1..1)
+                .cartesian_product(-1..1)
+                .map(|((x, y), z)| Position { x, y, z })
+                .filter(move |pos| self.is_adjacent_to(*pos)),
+        )
     }
 }
 
