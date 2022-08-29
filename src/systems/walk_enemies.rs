@@ -9,14 +9,19 @@ use priority_queue::DoublePriorityQueue;
 use crate::components::*;
 use crate::resources::*;
 
-// TODO Make sure they don't run into the player
+// TODO Make sure enemies don't collide, cause if they do they'll never come unstuck
 pub fn walk_enemies(
     tiles: Res<Tiles>,
-    mut enemies: Query<(&mut Position, &Awake, &mut MovementPath), (With<Enemy>, Without<Player>)>,
+    mut enemies: Query<
+        (Entity, &mut Position, &Awake, &mut MovementPath),
+        (With<Enemy>, Without<Player>),
+    >,
     player: Query<&Position, With<Player>>,
 ) {
+    let mut enemy_positions = BTreeMap::new();
     if let Some(player_position) = player.iter().next() {
-        for (mut position, awake, mut movement_path) in enemies.iter_mut() {
+        for (entity, mut position, awake, mut movement_path) in enemies.iter_mut() {
+            enemy_positions.insert(entity, *position);
             if position.is_adjacent_to(*player_position) {
                 return;
             }
@@ -32,7 +37,16 @@ pub fn walk_enemies(
                             .get(&(next_vertex.x, next_vertex.y, next_vertex.z))
                             .map_or_else(|| false, |cached_tile| cached_tile.passable);
                         if adjacency && next_vertex_is_passable {
+                            for (other_entity, other_position) in enemy_positions.iter() {
+                                if *other_entity != entity {
+                                    if next_vertex == *other_position {
+                                        movement_path.vertices = None;
+                                        return;
+                                    }
+                                }
+                            }
                             *position = next_vertex;
+                            enemy_positions.insert(entity, next_vertex);
                         } else {
                             movement_path.vertices = None;
                         }

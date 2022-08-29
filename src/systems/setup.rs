@@ -76,20 +76,22 @@ fn make_test_map() -> map::Map {
                         .map(|(i, k)| ((10 - k.abs(), i, k), border_tile.clone())),
                 )
                 .collect(),
-            enemies: vec![(
-                (5, 5, 0),
-                map::Enemy {
-                    sprite_index: 74,
-                    health: 100,
-                    strength: 5,
-                    wake_zone: (-3..3)
-                        .cartesian_product(-3..3)
-                        .map(|(i, j)| (5 + i, 5 + j, 0))
-                        .collect::<BTreeSet<_>>(),
-                },
-            )]
-            .into_iter()
-            .collect(),
+            enemies: (-3..=3)
+                .map(|k| {
+                    (
+                        (5, 5, k),
+                        map::Enemy {
+                            sprite_index: 74,
+                            health: 100,
+                            strength: 5,
+                            wake_zone: (-3..3)
+                                .cartesian_product(-3..3)
+                                .map(|(i, j)| (5 + i, 5 + j, k))
+                                .collect::<BTreeSet<_>>(),
+                        },
+                    )
+                })
+                .collect(),
         }],
         initial_room: 0,
         player_health: 1000,
