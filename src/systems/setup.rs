@@ -221,17 +221,7 @@ pub fn setup(
                 y: *y,
                 z: *z,
             })
-            .insert(MovementPath {
-                vertices: Some(
-                    (0..=10i32)
-                        .map(|i| Position {
-                            x: 4 - i,
-                            y: 5,
-                            z: 0,
-                        })
-                        .collect::<VecDeque<_>>(),
-                ),
-            })
+            .insert(MovementPath { vertices: None })
             .insert(Passable(false))
             .insert(WakeZone(enemy.wake_zone.clone()))
             .insert(Awake(false))

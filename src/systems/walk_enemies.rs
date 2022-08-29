@@ -10,6 +10,7 @@ use priority_queue::DoublePriorityQueue;
 use crate::components::*;
 use crate::resources::*;
 
+// TODO Make sure they don't run into the player
 pub fn walk_enemies(
     tiles: Res<Tiles>,
     mut enemies: Query<(&mut Position, &Awake, &mut MovementPath), (With<Enemy>, Without<Player>)>,
@@ -17,6 +18,12 @@ pub fn walk_enemies(
 ) {
     println!("Walking enemies");
     for (mut position, awake, mut movement_path) in enemies.iter_mut() {
+        if awake.0 {
+            if let Some(player_position) = player.iter().next() {
+                movement_path.vertices = find_shortest_path(&tiles, *position, *player_position);
+                println!("movement_path.vertices: {:?}", movement_path.vertices);
+            }
+        }
         match &mut movement_path.vertices {
             Some(ref mut path) => match path.pop_front() {
                 Some(next_vertex) => {
@@ -34,14 +41,7 @@ pub fn walk_enemies(
                     movement_path.vertices = None;
                 }
             },
-            None => {
-                if awake.0 {
-                    if let Some(player_position) = player.iter().next() {
-                        movement_path.vertices =
-                            find_shortest_path(&tiles, *position, *player_position);
-                    }
-                }
-            }
+            None => {}
         }
     }
 }
@@ -101,9 +101,11 @@ fn find_shortest_path(
             queue.push(*position, WithInfinity::Infinity);
         }
     }
+    distances_from_start.insert(starting_position, WithInfinity::Normal(0));
+    queue.push(starting_position, WithInfinity::Normal(0));
 
     loop {
-        match queue.pop_max() {
+        match queue.pop_min() {
             None => {
                 break;
             }
@@ -123,22 +125,34 @@ fn find_shortest_path(
         }
     }
 
-    if let Some(_distance) = distances_from_start.get(&ending_position) {
-        let mut current_position = ending_position;
-        let mut path = VecDeque::new();
-        loop {
-            if current_position == starting_position {
-                break;
+    let non_infinite_distances: BTreeMap<Position, i32> = distances_from_start
+        .iter()
+        .filter_map(|(pos, wi)| match wi {
+            WithInfinity::Infinity => None,
+            WithInfinity::Normal(i) => Some((*pos, *i)),
+        })
+        .collect();
+
+    println!("{:?}", non_infinite_distances);
+
+    match distances_from_start.get(&ending_position) {
+        Some(WithInfinity::Infinity) => None,
+        Some(WithInfinity::Normal(_distance)) => {
+            let mut current_position = ending_position;
+            let mut path = VecDeque::new();
+            loop {
+                if current_position == starting_position {
+                    break;
+                }
+                path.push_front(current_position);
+                if let Some(Some(pre)) = predecessor.get(&current_position) {
+                    current_position = *pre;
+                } else {
+                    panic!("should always have a path home");
+                }
             }
-            path.push_front(current_position);
-            if let Some(Some(pre)) = predecessor.get(&current_position) {
-                current_position = *pre;
-            } else {
-                panic!("should always have a path home");
-            }
+            Some(path)
         }
-        Some(path)
-    } else {
-        panic!("it should always at least be Infinity");
+        None => panic!("it should always at least be Infinity"),
     }
 }
