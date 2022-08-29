@@ -20,13 +20,16 @@ pub fn walk_enemies(
 ) {
     let mut enemy_positions = BTreeMap::new();
     if let Some(player_position) = player.iter().next() {
-        for (entity, mut position, awake, mut movement_path) in enemies.iter_mut() {
+        for (entity, position, _awake, _movement_path) in enemies.iter() {
             enemy_positions.insert(entity, *position);
+        }
+        for (entity, mut position, awake, mut movement_path) in enemies.iter_mut() {
             if position.is_adjacent_to(*player_position) {
                 return;
             }
             if awake.0 {
-                movement_path.vertices = find_shortest_path(&tiles, *position, *player_position);
+                movement_path.vertices =
+                    find_shortest_path(&tiles, &enemy_positions, *position, *player_position);
                 println!("movement_path.vertices: {:?}", movement_path.vertices);
             }
             match &mut movement_path.vertices {
@@ -93,6 +96,7 @@ fn with_infinity_test() {
 
 fn find_shortest_path(
     tiles: &Tiles,
+    enemies: &BTreeMap<Entity, Position>,
     starting_position: Position,
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
@@ -100,7 +104,11 @@ fn find_shortest_path(
         .0
         .iter()
         .filter_map(|(position, cached_tile)| {
-            if cached_tile.passable {
+            if cached_tile.passable
+                && enemies
+                    .iter()
+                    .all(|(_entity, pos)| &(pos.x, pos.y, pos.z) != position)
+            {
                 Some(position)
             } else {
                 None
