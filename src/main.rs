@@ -1,6 +1,7 @@
 mod components;
 mod events;
 mod map;
+mod maps;
 mod resources;
 mod systems;
 mod utils;

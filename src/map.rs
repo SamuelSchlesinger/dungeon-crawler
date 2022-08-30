@@ -2,9 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::components::Position;
+
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct Room {
-    pub initial_position: (i32, i32, i32),
+    pub initial_position: Position,
     pub tiles: PositionMap<Tile>,
     pub enemies: PositionMap<Enemy>,
 }
@@ -20,7 +22,7 @@ pub struct Enemy {
     pub sprite_index: u32,
     pub health: u32,
     pub strength: u32,
-    pub wake_zone: BTreeSet<(i32, i32, i32)>,
+    pub wake_zone: BTreeSet<Position>,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
@@ -28,20 +30,26 @@ pub struct ItemId(u32);
 
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct Map {
-    pub rooms: Vec<Room>,
+    pub room: Room,
     pub initial_room: u16,
     pub player_health: u32,
     pub player_strength: u32,
     pub player_sprite: u32,
+    pub victory_condition: VictoryCondition,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
+pub enum VictoryCondition {
+    Arrival(Position),
 }
 
 #[derive(PartialEq, Eq, Clone)]
-pub struct PositionMap<A>(BTreeMap<(i32, i32, i32), A>);
+pub struct PositionMap<A>(BTreeMap<Position, A>);
 
 impl<'a, A> IntoIterator for &'a PositionMap<A> {
-    type Item = (&'a (i32, i32, i32), &'a A);
+    type Item = (&'a Position, &'a A);
 
-    type IntoIter = std::collections::btree_map::Iter<'a, (i32, i32, i32), A>;
+    type IntoIter = std::collections::btree_map::Iter<'a, Position, A>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
@@ -49,17 +57,17 @@ impl<'a, A> IntoIterator for &'a PositionMap<A> {
 }
 
 impl<A> IntoIterator for PositionMap<A> {
-    type Item = ((i32, i32, i32), A);
+    type Item = (Position, A);
 
-    type IntoIter = std::collections::btree_map::IntoIter<(i32, i32, i32), A>;
+    type IntoIter = std::collections::btree_map::IntoIter<Position, A>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
-impl<A> FromIterator<((i32, i32, i32), A)> for PositionMap<A> {
-    fn from_iter<T: IntoIterator<Item = ((i32, i32, i32), A)>>(iter: T) -> Self {
+impl<A> FromIterator<(Position, A)> for PositionMap<A> {
+    fn from_iter<T: IntoIterator<Item = (Position, A)>>(iter: T) -> Self {
         PositionMap(FromIterator::from_iter(iter))
     }
 }
@@ -72,7 +80,16 @@ impl<A: Serialize + Clone> Serialize for PositionMap<A> {
         let v: Vec<_> = self
             .0
             .iter()
-            .map(|((i, j, k), a)| ((*i, *j, *k), a.clone()))
+            .map(|(Position { x, y, z }, a)| {
+                (
+                    Position {
+                        x: *x,
+                        y: *y,
+                        z: *z,
+                    },
+                    a.clone(),
+                )
+            })
             .collect();
         v.serialize(serializer)
     }

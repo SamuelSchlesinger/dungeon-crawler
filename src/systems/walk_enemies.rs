@@ -32,7 +32,7 @@ pub fn walk_enemies(
                         .adjacent()
                         .filter(|neighbor| {
                             tiles
-                                .get(&(neighbor.x, neighbor.y, neighbor.z))
+                                .get(&neighbor)
                                 .map_or_else(|| false, |cached_tile| cached_tile.passable)
                                 && enemy_positions.iter().all(|(_entity, pos)| pos != neighbor)
                         })
@@ -50,7 +50,7 @@ pub fn walk_enemies(
                 if let Some(next_vertex) = path.pop_front() {
                     let adjacency = position.is_adjacent_to(next_vertex);
                     let next_vertex_is_passable = tiles
-                        .get(&(next_vertex.x, next_vertex.y, next_vertex.z))
+                        .get(&next_vertex)
                         .map_or_else(|| false, |cached_tile| cached_tile.passable);
                     if adjacency && next_vertex_is_passable {
                         for (other_entity, other_position) in enemy_positions.iter() {
@@ -107,18 +107,13 @@ fn find_shortest_path(
         .0
         .iter()
         .filter_map(|(position, cached_tile)| {
-            if cached_tile.passable
-                && enemies
-                    .iter()
-                    .all(|(_entity, pos)| &(pos.x, pos.y, pos.z) != position)
-            {
+            if cached_tile.passable && enemies.iter().all(|(_entity, pos)| pos != position) {
                 Some(position)
             } else {
                 None
             }
         })
         .copied()
-        .map(|(x, y, z)| Position { x, y, z })
         .collect();
     let mut distances_from_start: BTreeMap<Position, WithInfinity<i32>> = BTreeMap::new();
     let mut predecessor: BTreeMap<Position, Option<Position>> = BTreeMap::new();

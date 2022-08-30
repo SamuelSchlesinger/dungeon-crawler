@@ -12,7 +12,19 @@ pub struct Strength(pub i32);
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct Health(pub i32);
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Component,
+    serde::Serialize,
+    serde::Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -97,7 +109,7 @@ impl Add<Position> for Position {
 }
 
 #[derive(Component, Debug)]
-pub struct WakeZone(pub BTreeSet<(i32, i32, i32)>);
+pub struct WakeZone(pub BTreeSet<Position>);
 
 #[derive(Component, Debug)]
 pub struct Awake(pub bool);

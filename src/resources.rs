@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use crate::components::Position;
+
 use bevy::prelude::*;
 
 #[derive(Debug)]
@@ -15,7 +17,7 @@ pub struct ScaleFactor(pub f32);
 pub struct MousePosition(pub Vec2);
 
 #[derive(Debug)]
-pub struct Tiles(pub BTreeMap<(i32, i32, i32), CachedTile>);
+pub struct Tiles(pub BTreeMap<Position, CachedTile>);
 
 #[derive(Debug, Copy, Clone)]
 pub struct CachedTile {
@@ -28,17 +30,17 @@ impl Tiles {
         Tiles(BTreeMap::new())
     }
 
-    pub fn insert(&mut self, key: (i32, i32, i32), cached_tile: CachedTile) {
+    pub fn insert(&mut self, key: Position, cached_tile: CachedTile) {
         self.0.insert(key, cached_tile);
     }
 
-    pub fn get(&self, key: &(i32, i32, i32)) -> Option<CachedTile> {
+    pub fn get(&self, key: &Position) -> Option<CachedTile> {
         self.0.get(key).copied()
     }
 }
 
 #[derive(Debug)]
-pub struct Enemies(pub BTreeMap<(i32, i32, i32), Entity>);
+pub struct Enemies(pub BTreeMap<Position, Entity>);
 
 #[derive(Debug)]
 pub struct SpriteTexture(pub Handle<TextureAtlas>);
@@ -48,7 +50,7 @@ impl Enemies {
         Enemies(BTreeMap::new())
     }
 
-    pub fn insert(&mut self, key: (i32, i32, i32), entity: Entity) {
+    pub fn insert(&mut self, key: Position, entity: Entity) {
         self.0.insert(key, entity);
     }
 }

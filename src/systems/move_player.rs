@@ -37,7 +37,7 @@ pub fn move_player(
         }
 
         if tiles
-            .get(&(position.x, position.y, position.z))
+            .get(&position)
             .map_or_else(|| true, |cached_tile| !cached_tile.passable)
         {
             *position = old_position;
@@ -52,7 +52,7 @@ pub fn move_player(
         }
 
         for (wake_zone, mut wake) in enemies.iter_mut() {
-            if wake_zone.0.contains(&(position.x, position.y, position.z)) {
+            if wake_zone.0.contains(&position) {
                 wake.0 = true;
             }
         }

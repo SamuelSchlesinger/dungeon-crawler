@@ -1,103 +1,10 @@
-use std::collections::BTreeSet;
-
 use bevy::prelude::*;
 
-use itertools::Itertools;
-
 use crate::components::*;
-use crate::map;
+use crate::maps;
 use crate::resources::*;
 
 const INITIAL_SCALE_FACTOR: f32 = 50.;
-
-fn make_test_map() -> map::Map {
-    let border_tile = map::Tile {
-        sprite_index: 15 * 64 - 13,
-        passable: false,
-    };
-    map::Map {
-        player_sprite: 71,
-        rooms: vec![map::Room {
-            initial_position: (1, 1, 0),
-            tiles: (-10i32..10)
-                .flat_map(|k| {
-                    (-(10 - k.abs())..(10 - k.abs()))
-                        .map(|j| (k, j))
-                        .collect::<Vec<_>>()
-                })
-                .flat_map(|(k, j)| {
-                    (-(10 - k.abs())..(10 - k.abs()))
-                        .map(|i| (i, j, k))
-                        .collect::<Vec<_>>()
-                })
-                .map(|(i, j, k)| {
-                    (
-                        (i, j, k),
-                        map::Tile {
-                            sprite_index: 960,
-                            passable: true,
-                        },
-                    )
-                })
-                .chain(
-                    (-10i32..=10)
-                        .flat_map(|k| {
-                            (-(10 - k.abs())..=(10 - k.abs()))
-                                .map(|i| (i, k))
-                                .collect::<Vec<_>>()
-                        })
-                        .map(|(i, k)| ((i, 10 - k.abs(), k), border_tile.clone())),
-                )
-                .chain(
-                    (-10i32..=10)
-                        .flat_map(|k| {
-                            (-(10 - k.abs())..=(10 - k.abs()))
-                                .map(|i| (i, k))
-                                .collect::<Vec<_>>()
-                        })
-                        .map(|(i, k)| ((i, -(10 - k.abs()), k), border_tile.clone())),
-                )
-                .chain(
-                    (-10i32..=10)
-                        .flat_map(|k| {
-                            (-(10 - k.abs())..=(10 - k.abs()))
-                                .map(|i| (i, k))
-                                .collect::<Vec<_>>()
-                        })
-                        .map(|(i, k)| ((-(10 - k.abs()), -i, k), border_tile.clone())),
-                )
-                .chain(
-                    (-10i32..=10)
-                        .flat_map(|k| {
-                            (-(10 - k.abs())..=(10 - k.abs()))
-                                .map(|i| (i, k))
-                                .collect::<Vec<_>>()
-                        })
-                        .map(|(i, k)| ((10 - k.abs(), i, k), border_tile.clone())),
-                )
-                .collect(),
-            enemies: (-3..=3)
-                .map(|k| {
-                    (
-                        (5, 5, k),
-                        map::Enemy {
-                            sprite_index: 74,
-                            health: 100,
-                            strength: 5,
-                            wake_zone: (-3..3)
-                                .cartesian_product(-3..3)
-                                .map(|(i, j)| (5 + i, 5 + j, k))
-                                .collect::<BTreeSet<_>>(),
-                        },
-                    )
-                })
-                .collect(),
-        }],
-        initial_room: 0,
-        player_health: 1000,
-        player_strength: 2,
-    }
-}
 
 fn initialize_resources(commands: &mut Commands) {
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
@@ -105,13 +12,13 @@ fn initialize_resources(commands: &mut Commands) {
     commands.insert_resource(ClearColor(Color::rgb(0., 0., 0.)));
 }
 
-fn create_camera(commands: &mut Commands, initial_position: (i32, i32, i32)) {
+fn create_camera(commands: &mut Commands, initial_position: Position) {
     let mut camera_2d_bundle = Camera2dBundle::default();
     camera_2d_bundle.transform = camera_2d_bundle.transform.with_translation(
         camera_2d_bundle.transform.translation
             + Vec3::new(
-                initial_position.0 as f32 * INITIAL_SCALE_FACTOR,
-                initial_position.1 as f32 * INITIAL_SCALE_FACTOR,
+                initial_position.x as f32 * INITIAL_SCALE_FACTOR,
+                initial_position.z as f32 * INITIAL_SCALE_FACTOR,
                 0.,
             ),
     );
@@ -133,30 +40,26 @@ pub fn setup(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let test_map = make_test_map();
+    let test_map = maps::unbeatable();
 
     commands.insert_resource(Follow(false));
 
-    let initial_position = test_map
-        .rooms
-        .get(test_map.initial_room as usize)
-        .unwrap()
-        .initial_position;
+    let initial_position = test_map.room.initial_position;
 
     create_camera(&mut commands, initial_position);
 
     initialize_resources(&mut commands);
 
-    commands.insert_resource(Floor(initial_position.2));
+    commands.insert_resource(Floor(initial_position.z));
 
     let tiles_texture_handle = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
 
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
 
-    let room = test_map.rooms[test_map.initial_room as usize].clone();
+    let room = test_map.room.clone();
     let mut tiles = Tiles::new();
 
-    for ((x, y, z), tile) in (&room.tiles).into_iter() {
+    for (Position { x, y, z }, tile) in (&room.tiles).into_iter() {
         let entity = commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform::from_xyz(
@@ -171,7 +74,7 @@ pub fn setup(
                     ..default()
                 },
                 visibility: Visibility {
-                    is_visible: *z == initial_position.2,
+                    is_visible: *z == initial_position.z,
                 },
                 ..default()
             })
@@ -186,7 +89,11 @@ pub fn setup(
             .insert(ZLevel(0.))
             .id();
         tiles.insert(
-            (*x, *y, *z),
+            Position {
+                x: *x,
+                y: *y,
+                z: *z,
+            },
             CachedTile {
                 entity,
                 passable: tile.passable,
@@ -198,7 +105,7 @@ pub fn setup(
 
     let mut enemies = Enemies::new();
 
-    for ((x, y, z), enemy) in (&room.enemies).into_iter() {
+    for (Position { x, y, z }, enemy) in (&room.enemies).into_iter() {
         let enemy_id = commands
             .spawn_bundle(SpriteSheetBundle {
                 transform: Transform::from_xyz(
@@ -213,7 +120,7 @@ pub fn setup(
                     ..default()
                 },
                 visibility: Visibility {
-                    is_visible: *z == initial_position.2,
+                    is_visible: *z == initial_position.z,
                 },
                 ..default()
             })
@@ -255,7 +162,14 @@ pub fn setup(
                 }),
             )
             .insert(TextOverEntity(enemy_id));
-        enemies.insert((*x, *y, *z), enemy_id);
+        enemies.insert(
+            Position {
+                x: *x,
+                y: *y,
+                z: *z,
+            },
+            enemy_id,
+        );
     }
 
     commands.insert_resource(enemies);
@@ -263,8 +177,8 @@ pub fn setup(
     let player_id = commands
         .spawn_bundle(SpriteSheetBundle {
             transform: Transform::from_xyz(
-                (room.initial_position.0 as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                (room.initial_position.1 as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                (room.initial_position.z as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                (room.initial_position.z as f32 - 0.5) * INITIAL_SCALE_FACTOR,
                 0.02,
             ),
             texture_atlas: tiles_texture_handle.clone(),
@@ -276,11 +190,7 @@ pub fn setup(
             visibility: Visibility { is_visible: true },
             ..default()
         })
-        .insert(Position {
-            x: room.initial_position.0,
-            y: room.initial_position.1,
-            z: room.initial_position.2,
-        })
+        .insert(room.initial_position.clone())
         .insert(Player)
         .insert(Health(test_map.player_health as i32))
         .insert(Strength(test_map.player_strength as i32))
