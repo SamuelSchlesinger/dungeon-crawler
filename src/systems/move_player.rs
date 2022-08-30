@@ -15,7 +15,7 @@ pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
 ) {
     if let Some((entity, mut position)) = query.iter_mut().next() {
-        let old_position = position.clone();
+        let old_position = *position;
         if keyboard_input.just_pressed(KeyCode::A) {
             position.x -= 1;
         } else if keyboard_input.just_pressed(KeyCode::D) {

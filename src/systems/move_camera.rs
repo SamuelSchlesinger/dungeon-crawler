@@ -36,8 +36,8 @@ pub fn move_camera(
         }
     }
     if keyboard_input.just_pressed(KeyCode::PageUp) {
-        scale_factor.0 = scale_factor.0 - 5.0;
+        scale_factor.0 -= 5.0;
     } else if keyboard_input.just_pressed(KeyCode::PageDown) {
-        scale_factor.0 = scale_factor.0 + 5.0;
+        scale_factor.0 += 5.0;
     }
 }

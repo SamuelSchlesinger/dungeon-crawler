@@ -10,54 +10,58 @@ use crate::components::*;
 use crate::resources::*;
 
 // TODO Make sure enemies don't collide, cause if they do they'll never come unstuck
+// NB Maybe they can't already?
 pub fn walk_enemies(
     tiles: Res<Tiles>,
-    mut enemies: Query<
-        (Entity, &mut Position, &Awake, &mut MovementPath),
-        (With<Enemy>, Without<Player>),
-    >,
+    mut enemies: Query<(Entity, &mut Position, &Awake), (With<Enemy>, Without<Player>)>,
     player: Query<&Position, With<Player>>,
 ) {
     let mut enemy_positions = BTreeMap::new();
+    let mut movement_path = None;
     if let Some(player_position) = player.iter().next() {
-        for (entity, position, _awake, _movement_path) in enemies.iter() {
+        for (entity, position, _awake) in enemies.iter() {
             enemy_positions.insert(entity, *position);
         }
-        for (entity, mut position, awake, mut movement_path) in enemies.iter_mut() {
+        for (entity, mut position, awake) in enemies.iter_mut() {
             if position.is_adjacent_to(*player_position) {
                 return;
             }
             if awake.0 {
-                movement_path.vertices =
+                if rand::random() && rand::random() && rand::random() {
+                    let potential_positions: Vec<Position> = position
+                        .adjacent()
+                        .filter(|neighbor| {
+                            tiles
+                                .get(&(neighbor.x, neighbor.y, neighbor.z))
+                                .map_or_else(|| false, |cached_tile| cached_tile.passable)
+                                && enemy_positions.iter().all(|(_entity, pos)| pos != neighbor)
+                        })
+                        .collect();
+                    if !potential_positions.is_empty() {
+                        *position = potential_positions
+                            [rand::random::<usize>() % potential_positions.len()];
+                        return;
+                    }
+                }
+                movement_path =
                     find_shortest_path(&tiles, &enemy_positions, *position, *player_position);
             }
-            match &mut movement_path.vertices {
-                Some(ref mut path) => match path.pop_front() {
-                    Some(next_vertex) => {
-                        let adjacency = position.is_adjacent_to(next_vertex);
-                        let next_vertex_is_passable = tiles
-                            .get(&(next_vertex.x, next_vertex.y, next_vertex.z))
-                            .map_or_else(|| false, |cached_tile| cached_tile.passable);
-                        if adjacency && next_vertex_is_passable {
-                            for (other_entity, other_position) in enemy_positions.iter() {
-                                if *other_entity != entity {
-                                    if next_vertex == *other_position {
-                                        movement_path.vertices = None;
-                                        return;
-                                    }
-                                }
+            if let Some(ref mut path) = &mut movement_path {
+                if let Some(next_vertex) = path.pop_front() {
+                    let adjacency = position.is_adjacent_to(next_vertex);
+                    let next_vertex_is_passable = tiles
+                        .get(&(next_vertex.x, next_vertex.y, next_vertex.z))
+                        .map_or_else(|| false, |cached_tile| cached_tile.passable);
+                    if adjacency && next_vertex_is_passable {
+                        for (other_entity, other_position) in enemy_positions.iter() {
+                            if *other_entity != entity && next_vertex == *other_position {
+                                return;
                             }
-                            *position = next_vertex;
-                            enemy_positions.insert(entity, next_vertex);
-                        } else {
-                            movement_path.vertices = None;
                         }
+                        *position = next_vertex;
+                        enemy_positions.insert(entity, next_vertex);
                     }
-                    None => {
-                        movement_path.vertices = None;
-                    }
-                },
-                None => {}
+                }
             }
         }
     }

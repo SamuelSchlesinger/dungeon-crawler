@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::Position;
 
+#[allow(unused)]
 pub fn convert_mouse_position_to_world_coordinates(
     window: &Window,
     transform: &Transform,

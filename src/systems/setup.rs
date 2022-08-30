@@ -222,7 +222,6 @@ pub fn setup(
                 y: *y,
                 z: *z,
             })
-            .insert(MovementPath { vertices: None })
             .insert(Passable(false))
             .insert(WakeZone(enemy.wake_zone.clone()))
             .insert(Awake(false))

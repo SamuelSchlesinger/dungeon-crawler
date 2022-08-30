@@ -1,18 +1,10 @@
 use bevy::prelude::*;
 use itertools::Itertools;
 
-use std::{
-    collections::{BTreeSet, VecDeque},
-    ops::Add,
-};
+use std::{collections::BTreeSet, ops::Add};
 
 #[derive(Component, Debug)]
 pub struct TextOverEntity(pub Entity);
-
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub struct MovementPath {
-    pub vertices: Option<VecDeque<Position>>,
-}
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct Strength(pub i32);

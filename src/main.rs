@@ -17,13 +17,12 @@ fn main() {
                 .with_run_criteria(FixedTimestep::steps_per_second(60.))
                 .with_system(follow.before(animate_sprites))
                 .with_system(animate_sprites)
-                .with_system(display_health.after(animate_sprites)),
+                .with_system(display_health),
         )
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(2.))
-                .with_system(walk_enemies)
-                .after(setup),
+                .with_system(walk_enemies),
         )
         .add_system(move_camera)
         .add_system(move_player)
