@@ -15,7 +15,6 @@ pub fn combat(
         if let Some((position, strength, health)) = player_query.iter_mut().next() {
             (position, strength, health)
         } else {
-            println!("bad stuff happening");
             return;
         };
 
