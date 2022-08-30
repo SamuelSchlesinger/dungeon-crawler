@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::components::Position;
+pub use crate::map::VictoryCondition;
 
 use bevy::prelude::*;
 

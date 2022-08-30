@@ -52,6 +52,8 @@ pub fn setup(
 
     commands.insert_resource(Floor(initial_position.z));
 
+    commands.insert_resource(test_map.victory_condition);
+
     let tiles_texture_handle = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
 
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));

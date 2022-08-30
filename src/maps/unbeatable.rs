@@ -108,33 +108,32 @@ pub fn unbeatable() -> map::Map {
                 )
                 .collect(),
             enemies: (-3..=3)
-                .map(|k| {
-                    (
-                        Position { x: 5, y: 5, z: k },
-                        map::Enemy {
-                            sprite_index: 74,
-                            health: 100,
-                            strength: 5,
-                            wake_zone: (-3..3)
-                                .cartesian_product(-3..3)
-                                .map(|(i, j)| Position {
-                                    x: 5 + i,
-                                    y: 5 + j,
-                                    z: k,
-                                })
-                                .collect::<BTreeSet<_>>(),
-                        },
-                    )
+                .flat_map(|k| {
+                    let make_enemy = |position: Position| {
+                        (
+                            position,
+                            map::Enemy {
+                                sprite_index: 74,
+                                health: 100,
+                                strength: 5,
+                                wake_zone: (-3..3)
+                                    .cartesian_product(-3..3)
+                                    .map(|(i, j)| Position {
+                                        x: position.x + i,
+                                        y: position.y + j,
+                                        z: k,
+                                    })
+                                    .collect(),
+                            },
+                        )
+                    };
+                    vec![make_enemy(Position { x: 5, y: 5, z: k })]
                 })
                 .collect(),
         },
         initial_room: 0,
         player_health: 1000,
         player_strength: 2,
-        victory_condition: map::VictoryCondition::Arrival(Position {
-            x: 100,
-            y: 100,
-            z: 100,
-        }),
+        victory_condition: map::VictoryCondition::Arrival(Position { x: 0, y: 0, z: 0 }),
     }
 }

@@ -3,16 +3,19 @@ mod events;
 mod map;
 mod maps;
 mod resources;
+mod state;
 mod systems;
 mod utils;
 
 use bevy::{prelude::*, time::FixedTimestep};
+use state::GameState;
 use systems::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
+        .add_state(GameState::Playing)
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(60.))
@@ -35,5 +38,11 @@ fn main() {
                 .with_system(combat),
         )
         .add_system(track_mouse_movement)
+        .add_system_set(
+            SystemSet::new()
+                .with_run_criteria(FixedTimestep::steps_per_second(1.))
+                .with_system(victory),
+        )
+        .add_system_set(SystemSet::on_update(GameState::Victory).with_system(on_victory))
         .run();
 }
