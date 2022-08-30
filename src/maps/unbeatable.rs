@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use itertools::Itertools;
 
 use crate::components::Position;
@@ -109,25 +107,31 @@ pub fn unbeatable() -> map::Map {
                 .collect(),
             enemies: (-3..=3)
                 .flat_map(|k| {
-                    let make_enemy = |position: Position| {
+                    let make_enemy = |x: i32, y: i32, z: i32| {
                         (
-                            position,
+                            Position { x, y, z },
                             map::Enemy {
                                 sprite_index: 74,
                                 health: 100,
                                 strength: 5,
-                                wake_zone: (-3..3)
-                                    .cartesian_product(-3..3)
-                                    .map(|(i, j)| Position {
-                                        x: position.x + i,
-                                        y: position.y + j,
-                                        z: k,
+                                wake_zone: (-6..=6)
+                                    .cartesian_product(-6..=6)
+                                    .cartesian_product(-6..=6)
+                                    .map(|((dx, dy), dz)| Position {
+                                        x: x + dx,
+                                        y: y + dy,
+                                        z: k + dz,
                                     })
                                     .collect(),
                             },
                         )
                     };
-                    vec![make_enemy(Position { x: 5, y: 5, z: k })]
+                    vec![
+                        make_enemy(5, 5, k),
+                        make_enemy(-5, 5, k),
+                        make_enemy(-5, -5, k),
+                        make_enemy(5, -5, k),
+                    ]
                 })
                 .collect(),
         },
