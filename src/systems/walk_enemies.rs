@@ -28,7 +28,7 @@ pub fn walk_enemies(
                     return;
                 }
                 // random motion
-                if false && rand::random() && rand::random() && rand::random() && rand::random() {
+                if rand::random() && rand::random() && rand::random() {
                     let potential_positions: Vec<Position> = position
                         .adjacent()
                         .filter(|neighbor| {
@@ -101,6 +101,12 @@ enum WithInfinity<I> {
     Infinity,
 }
 
+impl<I> Default for WithInfinity<I> {
+    fn default() -> Self {
+        WithInfinity::Infinity
+    }
+}
+
 impl<I: Add<I, Output = I>> Add<WithInfinity<I>> for WithInfinity<I> {
     type Output = WithInfinity<I>;
 
@@ -131,6 +137,9 @@ fn find_shortest_path(
     starting_position: Position,
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
+    fn dist_2d(a: Position, b: Position) -> i32 {
+        (a.x.abs_diff(b.x) + a.y.abs_diff(b.y) + a.z.abs_diff(b.z)) as i32
+    }
     let all_passable_tile_positions: BTreeSet<Position> = tiles
         .0
         .iter()
@@ -146,17 +155,13 @@ fn find_shortest_path(
     let mut distances_from_start: BTreeMap<Position, WithInfinity<i32>> = BTreeMap::new();
     let mut predecessor: BTreeMap<Position, Option<Position>> = BTreeMap::new();
     let mut queue: DoublePriorityQueue<Position, WithInfinity<i32>> = DoublePriorityQueue::new();
-    for position in all_passable_tile_positions.iter() {
-        if *position != starting_position {
-            distances_from_start.insert(*position, WithInfinity::Infinity);
-            predecessor.insert(*position, None);
-            queue.push(*position, WithInfinity::Infinity);
-        }
-    }
     distances_from_start.insert(starting_position, WithInfinity::Normal(0));
-    queue.push(starting_position, WithInfinity::Normal(0));
+    queue.push(
+        starting_position,
+        WithInfinity::Normal(0) + WithInfinity::Normal(dist_2d(starting_position, ending_position)),
+    );
 
-    if distances_from_start.get(&ending_position).is_none() {
+    if !all_passable_tile_positions.contains(&ending_position) {
         return None;
     }
 
@@ -171,10 +176,13 @@ fn find_shortest_path(
                     .filter(|v| all_passable_tile_positions.contains(v))
                 {
                     let alt = distance + WithInfinity::Normal(1);
-                    if alt < *distances_from_start.get(&v).expect("boo!") {
+                    if alt < *distances_from_start.entry(v).or_default() {
+                        let halt = alt + WithInfinity::Normal(dist_2d(position, ending_position));
                         distances_from_start.insert(position, alt);
                         predecessor.insert(v, Some(position));
-                        assert!(queue.change_priority(&v, alt).is_some());
+                        if queue.change_priority(&v, halt).is_none() {
+                            queue.push(v, halt);
+                        }
                     }
                 }
             }
