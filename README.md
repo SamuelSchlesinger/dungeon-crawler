@@ -12,6 +12,13 @@ enemies or make it to the tile, and sometimes you must do both.
 
 ![Gameplay](/gameplay.gif)
 
+The way combat works is that any enemy adjacent to you (up, down, left, right
+of you) will deal damage to you every combat round proportional to their
+strength. You will deal damage to a random enemy adjacent to you every combat
+round proportional to your strength. Thus, the important aspect of combat is
+to avoid being surrounded, as you will be taking more damage than you have to
+if you fight every enemy individually.
+
 ## Future Steps
 
 1. Map editor: this will allow me to much more easily construct scenarios and
