@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -11,10 +12,29 @@ pub struct Room {
     pub enemies: PositionMap<Enemy>,
 }
 
+impl Room {
+    pub fn add_tile(&mut self, position: Position, tile: Tile) {
+        self.tiles.0.insert(position, tile);
+    }
+
+    pub fn add_enemy(&mut self, position: Position, enemy: Enemy) {
+        self.enemies.0.insert(position, enemy);
+    }
+}
+
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
 pub struct Tile {
     pub sprite_index: u32,
     pub passable: bool,
+}
+
+impl Tile {
+    pub fn new(sprite_index: u32, passable: bool) -> Self {
+        Tile {
+            sprite_index,
+            passable,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
@@ -23,6 +43,39 @@ pub struct Enemy {
     pub health: u32,
     pub strength: u32,
     pub wake_zone: BTreeSet<Position>,
+}
+
+impl Enemy {
+    pub fn new(
+        sprite_index: u32,
+        health: u32,
+        strength: u32,
+        wake_zone: BTreeSet<Position>,
+    ) -> Self {
+        Enemy {
+            sprite_index,
+            health,
+            strength,
+            wake_zone,
+        }
+    }
+
+    pub fn circular_wake_zone(center: Position, radius: i32) -> BTreeSet<Position> {
+        (-radius..=radius)
+            .cartesian_product(-radius..=radius)
+            .filter_map(|(dx, dy)| {
+                if (dx.pow(2) as f32 + dy.pow(2) as f32).sqrt() <= radius as f32 {
+                    Some(Position {
+                        x: center.x + dx,
+                        y: center.y + dy,
+                        z: center.z,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
