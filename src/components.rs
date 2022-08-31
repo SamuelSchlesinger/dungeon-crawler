@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use itertools::Itertools;
 
-use std::{collections::BTreeSet, ops::Add};
+use std::{
+    collections::{BTreeSet, VecDeque},
+    ops::Add,
+};
 
 #[derive(Component, Debug)]
 pub struct TextOverEntity(pub Entity);
@@ -34,6 +37,9 @@ pub struct Position {
 impl Position {
     pub fn is_adjacent_to(self, other: Position) -> bool {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y) + self.z.abs_diff(other.z) == 1
+            || self.x.abs_diff(other.x) == 1 && self.y.abs_diff(other.y) == 1 && self.z == other.z
+            || self.y.abs_diff(other.y) == 1 && self.z.abs_diff(other.z) == 1 && self.x == other.x
+            || self.z.abs_diff(other.z) == 1 && self.x.abs_diff(other.x) == 1 && self.y == other.y
     }
 
     pub fn adjacent(self) -> Box<dyn Iterator<Item = Position>> {
@@ -140,4 +146,10 @@ fn test_adjacency() {
     let position = Position { x: 5, y: 5, z: 0 };
     let other = Position { x: 4, y: 5, z: 0 };
     assert!(position.is_adjacent_to(other));
+}
+
+#[derive(Component, Debug)]
+pub struct MovementPath {
+    pub age: usize,
+    pub path: Option<VecDeque<Position>>,
 }

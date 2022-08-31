@@ -41,6 +41,9 @@ pub struct Map {
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum VictoryCondition {
     Arrival(Position),
+    Extermination,
+    Or(Vec<VictoryCondition>),
+    And(Vec<VictoryCondition>),
 }
 
 #[derive(PartialEq, Eq, Clone)]

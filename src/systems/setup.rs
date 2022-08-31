@@ -137,6 +137,10 @@ pub fn setup(
             .insert(Health(enemy.health as i32))
             .insert(Strength(enemy.strength as i32))
             .insert(Enemy)
+            .insert(MovementPath {
+                age: 20,
+                path: None,
+            })
             .insert(SpriteIndex(enemy.sprite_index as usize))
             .insert(ZLevel(0.01))
             .id();

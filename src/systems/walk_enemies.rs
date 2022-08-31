@@ -13,20 +13,24 @@ use crate::resources::*;
 // NB Maybe they can't already?
 pub fn walk_enemies(
     tiles: Res<Tiles>,
-    mut enemies: Query<(Entity, &mut Position, &Awake), (With<Enemy>, Without<Player>)>,
+    mut enemies: Query<
+        (Entity, &mut Position, &Awake, &mut MovementPath),
+        (With<Enemy>, Without<Player>),
+    >,
     player: Query<&Position, With<Player>>,
 ) {
     let mut enemy_positions = BTreeMap::new();
-    let mut movement_path = None;
     if let Some(player_position) = player.iter().next() {
-        for (entity, position, _awake) in enemies.iter() {
+        for (entity, position, _awake, _movement_path) in enemies.iter() {
             enemy_positions.insert(entity, *position);
         }
-        for (entity, mut position, awake) in enemies.iter_mut() {
-            if position.is_adjacent_to(*player_position) {
-                return;
-            }
+        for (entity, mut position, awake, mut movement_path) in enemies.iter_mut() {
             if awake.0 {
+                // attack!
+                if position.is_adjacent_to(*player_position) {
+                    return;
+                }
+                // random motion
                 if rand::random() && rand::random() && rand::random() {
                     let potential_positions: Vec<Position> = position
                         .adjacent()
@@ -35,6 +39,18 @@ pub fn walk_enemies(
                                 .get(&neighbor)
                                 .map_or_else(|| false, |cached_tile| cached_tile.passable)
                                 && enemy_positions.iter().all(|(_entity, pos)| pos != neighbor)
+                                && movement_path
+                                    .path
+                                    .iter()
+                                    .map(|path| {
+                                        path.get(0).map_or_else(
+                                            || true,
+                                            |intended_location| {
+                                                neighbor.is_adjacent_to(*intended_location)
+                                            },
+                                        )
+                                    })
+                                    .all(|e| e)
                         })
                         .collect();
                     if !potential_positions.is_empty() {
@@ -43,23 +59,30 @@ pub fn walk_enemies(
                         return;
                     }
                 }
-                movement_path =
-                    find_shortest_path(&tiles, &enemy_positions, *position, *player_position);
-            }
-            if let Some(ref mut path) = &mut movement_path {
-                if let Some(next_vertex) = path.pop_front() {
-                    let adjacency = position.is_adjacent_to(next_vertex);
-                    let next_vertex_is_passable = tiles
-                        .get(&next_vertex)
-                        .map_or_else(|| false, |cached_tile| cached_tile.passable);
-                    if adjacency && next_vertex_is_passable {
-                        for (other_entity, other_position) in enemy_positions.iter() {
-                            if *other_entity != entity && next_vertex == *other_position {
-                                return;
+                if movement_path.path.is_none() {
+                    movement_path.path =
+                        find_shortest_path(&tiles, &enemy_positions, *position, *player_position);
+                    movement_path.age = 0;
+                }
+                movement_path.age += 1;
+                if let Some(ref mut path) = &mut movement_path.path {
+                    if let Some(next_vertex) = path.pop_front() {
+                        let adjacency = position.is_adjacent_to(next_vertex);
+                        let next_vertex_is_passable = tiles
+                            .get(&next_vertex)
+                            .map_or_else(|| false, |cached_tile| cached_tile.passable);
+                        if adjacency && next_vertex_is_passable {
+                            for (other_entity, other_position) in enemy_positions.iter() {
+                                if *other_entity != entity && next_vertex == *other_position {
+                                    movement_path.path = None;
+                                    return;
+                                }
                             }
+                            *position = next_vertex;
+                            enemy_positions.insert(entity, next_vertex);
                         }
-                        *position = next_vertex;
-                        enemy_positions.insert(entity, next_vertex);
+                    } else {
+                        movement_path.path = None;
                     }
                 }
             }
