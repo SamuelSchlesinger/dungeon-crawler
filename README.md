@@ -5,6 +5,11 @@ already with a great number of sprites, as well as player and camera movement.
 
 ## Gameplay
 
+In this level, we have no strength, and cannot even withstand one attack, so
+we must avoid the enemies and make it to the victory tile. In other levels, we
+must kill all the enemies. In some levels, you can either kill all of the
+enemies or make it to the tile, and sometimes you must do both. 
+
 ![Gameplay](/gameplay.gif)
 
 ## Future Steps
