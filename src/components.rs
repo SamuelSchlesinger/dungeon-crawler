@@ -36,10 +36,10 @@ pub struct Position {
 
 impl Position {
     pub fn is_adjacent_to(self, other: Position) -> bool {
-        self.x.abs_diff(other.x) + self.y.abs_diff(other.y) + self.z.abs_diff(other.z) == 1
-            || self.x.abs_diff(other.x) == 1 && self.y.abs_diff(other.y) == 1 && self.z == other.z
-            || self.y.abs_diff(other.y) == 1 && self.z.abs_diff(other.z) == 1 && self.x == other.x
-            || self.z.abs_diff(other.z) == 1 && self.x.abs_diff(other.x) == 1 && self.y == other.y
+        self.x.abs_diff(other.x) + self.y.abs_diff(other.y) + self.z.abs_diff(other.z) > 0
+            && self.x.abs_diff(other.x) <= 1
+            && self.y.abs_diff(other.y) <= 1
+            && self.z.abs_diff(other.z) <= 1
     }
 
     pub fn adjacent(self) -> Box<dyn Iterator<Item = Position>> {
@@ -67,22 +67,11 @@ fn position_adjacency_test() {
     let d = Position { z: 2, ..a };
     assert!(a.is_adjacent_to(d));
     let e = Position { y: 2, ..b };
-    assert!(!a.is_adjacent_to(e));
+    assert!(a.is_adjacent_to(e));
     let f = Position { z: 2, ..b };
-    assert!(!a.is_adjacent_to(f));
-
-    let adjacent_results: BTreeSet<Position> = a.adjacent().collect();
-    let ground_truth: BTreeSet<Position> = vec![
-        Position { x: 2, y: 1, z: 1 },
-        Position { x: 0, y: 1, z: 1 },
-        Position { x: 1, y: 2, z: 1 },
-        Position { x: 1, y: 0, z: 1 },
-        Position { x: 1, y: 1, z: 2 },
-        Position { x: 1, y: 1, z: 0 },
-    ]
-    .into_iter()
-    .collect();
-    assert_eq!(adjacent_results, ground_truth);
+    assert!(a.is_adjacent_to(f));
+    let g = Position { z: 10, ..e };
+    assert!(!a.is_adjacent_to(g));
 }
 
 impl From<Vec3> for Position {

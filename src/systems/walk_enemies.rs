@@ -13,32 +13,31 @@ use crate::resources::*;
 // NB Maybe they can't already?
 pub fn walk_enemies(
     tiles: Res<Tiles>,
-    mut enemies: Query<
+    mut enemies_query: Query<
         (Entity, &mut Position, &Awake, &mut MovementPath),
         (With<Enemy>, Without<Player>),
     >,
+    mut enemies: ResMut<Enemies>,
     player: Query<&Position, With<Player>>,
 ) {
-    let mut enemy_positions = BTreeMap::new();
     if let Some(player_position) = player.iter().next() {
-        for (entity, position, _awake, _movement_path) in enemies.iter() {
-            enemy_positions.insert(entity, *position);
-        }
-        for (entity, mut position, awake, mut movement_path) in enemies.iter_mut() {
+        for (entity, mut position, awake, mut movement_path) in enemies_query.iter_mut() {
             if awake.0 {
                 // attack!
                 if position.is_adjacent_to(*player_position) {
                     return;
                 }
                 // random motion
-                if rand::random() && rand::random() && rand::random() {
+                if false && rand::random() && rand::random() && rand::random() && rand::random() {
                     let potential_positions: Vec<Position> = position
                         .adjacent()
                         .filter(|neighbor| {
                             tiles
                                 .get(&neighbor)
                                 .map_or_else(|| false, |cached_tile| cached_tile.passable)
-                                && enemy_positions.iter().all(|(_entity, pos)| pos != neighbor)
+                                && enemies
+                                    .enemies_at(*neighbor)
+                                    .map_or_else(|| true, |s| s.is_empty())
                                 && movement_path
                                     .path
                                     .iter()
@@ -56,30 +55,36 @@ pub fn walk_enemies(
                     if !potential_positions.is_empty() {
                         *position = potential_positions
                             [rand::random::<usize>() % potential_positions.len()];
+                        enemies.insert(*position, entity);
                         return;
                     }
                 }
-                if movement_path.path.is_none() {
+                if match &movement_path.path {
+                    None => true,
+                    Some(path) => path.is_empty(),
+                } {
                     movement_path.path =
-                        find_shortest_path(&tiles, &enemy_positions, *position, *player_position);
+                        find_shortest_path(&tiles, &mut enemies, *position, *player_position);
                     movement_path.age = 0;
                 }
-                movement_path.age += 1;
+                movement_path.age += rand::random::<usize>() % 3;
                 if let Some(ref mut path) = &mut movement_path.path {
                     if let Some(next_vertex) = path.pop_front() {
                         let adjacency = position.is_adjacent_to(next_vertex);
                         let next_vertex_is_passable = tiles
                             .get(&next_vertex)
                             .map_or_else(|| false, |cached_tile| cached_tile.passable);
-                        if adjacency && next_vertex_is_passable {
-                            for (other_entity, other_position) in enemy_positions.iter() {
-                                if *other_entity != entity && next_vertex == *other_position {
-                                    movement_path.path = None;
-                                    return;
-                                }
-                            }
+                        if adjacency
+                            && next_vertex_is_passable
+                            && enemies.enemies_at(next_vertex).map_or_else(
+                                || true,
+                                |set| set.contains(&entity) && set.len() == 1 || set.is_empty(),
+                            )
+                        {
                             *position = next_vertex;
-                            enemy_positions.insert(entity, next_vertex);
+                            enemies.insert(next_vertex, entity);
+                        } else {
+                            movement_path.path = None;
                         }
                     } else {
                         movement_path.path = None;
@@ -122,7 +127,7 @@ fn with_infinity_test() {
 
 fn find_shortest_path(
     tiles: &Tiles,
-    enemies: &BTreeMap<Entity, Position>,
+    enemies: &mut Enemies,
     starting_position: Position,
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
@@ -130,7 +135,7 @@ fn find_shortest_path(
         .0
         .iter()
         .filter_map(|(position, cached_tile)| {
-            if cached_tile.passable && enemies.iter().all(|(_entity, pos)| pos != position) {
+            if cached_tile.passable && !enemies.occupied_position(*position) {
                 Some(position)
             } else {
                 None
@@ -150,6 +155,10 @@ fn find_shortest_path(
     }
     distances_from_start.insert(starting_position, WithInfinity::Normal(0));
     queue.push(starting_position, WithInfinity::Normal(0));
+
+    if distances_from_start.get(&ending_position).is_none() {
+        return None;
+    }
 
     loop {
         match queue.pop_min() {

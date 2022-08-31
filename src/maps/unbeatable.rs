@@ -113,7 +113,7 @@ pub fn unbeatable() -> map::Map {
                             map::Enemy {
                                 sprite_index: 74,
                                 health: 100,
-                                strength: 100,
+                                strength: 10,
                                 wake_zone: (-6..=6)
                                     .cartesian_product(-6..=6)
                                     .cartesian_product(-6..=6)
@@ -136,7 +136,7 @@ pub fn unbeatable() -> map::Map {
                 .collect(),
         },
         initial_room: 0,
-        player_health: 2000,
+        player_health: 4000,
         player_strength: 20,
         victory_condition: map::VictoryCondition::Or(vec![
             map::VictoryCondition::Extermination,

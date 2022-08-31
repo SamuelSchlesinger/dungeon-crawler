@@ -44,7 +44,6 @@ pub fn combat(
     health.0 -= player_strength.0;
 
     if health.0 <= 0 {
-        println!("entity {:?} died", entity);
         commands.entity(*entity).despawn();
         for (text_entity, TextOverEntity(other_entity)) in text_query.iter() {
             if other_entity == entity {
