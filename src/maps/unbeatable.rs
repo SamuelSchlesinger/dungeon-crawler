@@ -135,7 +135,6 @@ pub fn unbeatable() -> map::Map {
                 })
                 .collect(),
         },
-        initial_room: 0,
         player_health: 4000,
         player_strength: 20,
         victory_condition: map::VictoryCondition::Or(vec![

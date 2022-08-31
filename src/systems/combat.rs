@@ -4,16 +4,19 @@ use crate::components::*;
 
 pub fn combat(
     mut commands: Commands,
-    mut player_query: Query<(&Position, &Strength, &mut Health), (With<Player>, Without<Enemy>)>,
+    mut player_query: Query<
+        (Entity, &Position, &Strength, &mut Health),
+        (With<Player>, Without<Enemy>),
+    >,
     mut enemy_query: Query<
         (Entity, &Strength, &Position, &mut Health),
         (With<Enemy>, Without<Player>),
     >,
     text_query: Query<(Entity, &TextOverEntity)>,
 ) {
-    let (player_position, player_strength, mut player_health) =
-        if let Some((position, strength, health)) = player_query.iter_mut().next() {
-            (position, strength, health)
+    let (player_entity, player_position, player_strength, mut player_health) =
+        if let Some((player_entity, position, strength, health)) = player_query.iter_mut().next() {
+            (player_entity, position, strength, health)
         } else {
             return;
         };
@@ -34,7 +37,7 @@ pub fn combat(
     }
 
     if player_health.0 <= 0 {
-        panic!("game over bitch");
+        commands.entity(player_entity).despawn();
     }
 
     let i: usize = rand::random();

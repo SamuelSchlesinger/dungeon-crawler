@@ -1,9 +1,11 @@
 mod animate_sprites;
 mod combat;
+mod defeat;
 mod display_health;
 mod follow;
 mod move_camera;
 mod move_player;
+mod on_defeat;
 mod on_victory;
 mod set_follow;
 mod set_visibility;
@@ -14,10 +16,12 @@ mod walk_enemies;
 
 pub use animate_sprites::animate_sprites;
 pub use combat::combat;
+pub use defeat::defeat;
 pub use display_health::display_health;
 pub use follow::follow;
 pub use move_camera::move_camera;
 pub use move_player::move_player;
+pub use on_defeat::on_defeat;
 pub use on_victory::on_victory;
 pub use set_follow::set_follow;
 pub use set_visibility::set_visibility;

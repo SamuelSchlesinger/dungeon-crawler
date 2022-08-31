@@ -13,12 +13,22 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn add_tile(&mut self, position: Position, tile: Tile) {
-        self.tiles.0.insert(position, tile);
+    pub fn new(initial_position: Position) -> Self {
+        Room {
+            initial_position,
+            tiles: PositionMap(BTreeMap::new()),
+            enemies: PositionMap(BTreeMap::new()),
+        }
     }
 
-    pub fn add_enemy(&mut self, position: Position, enemy: Enemy) {
+    pub fn add_tile(&mut self, position: Position, tile: Tile) -> &mut Self {
+        self.tiles.0.insert(position, tile);
+        self
+    }
+
+    pub fn add_enemy(&mut self, position: Position, enemy: Enemy) -> &mut Self {
         self.enemies.0.insert(position, enemy);
+        self
     }
 }
 
@@ -84,7 +94,6 @@ pub struct ItemId(u32);
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct Map {
     pub room: Room,
-    pub initial_room: u16,
     pub player_health: u32,
     pub player_strength: u32,
     pub player_sprite: u32,

@@ -35,6 +35,10 @@ pub struct Position {
 }
 
 impl Position {
+    pub fn new(x: i32, y: i32, z: i32) -> Self {
+        Position { x, y, z }
+    }
+
     pub fn is_adjacent_to(self, other: Position) -> bool {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y) + self.z.abs_diff(other.z) == 1
     }

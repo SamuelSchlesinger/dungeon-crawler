@@ -59,10 +59,12 @@ pub fn walk_enemies(
                         return;
                     }
                 }
-                if match &movement_path.path {
-                    None => true,
-                    Some(path) => path.is_empty(),
-                } {
+                if movement_path.age >= 5
+                    || match &movement_path.path {
+                        None => true,
+                        Some(path) => path.is_empty(),
+                    }
+                {
                     movement_path.path =
                         find_shortest_path(&tiles, &mut enemies, *position, *player_position);
                     movement_path.age = 0;
@@ -138,7 +140,8 @@ fn find_shortest_path(
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
     fn dist_2d(a: Position, b: Position) -> i32 {
-        (a.x.abs_diff(b.x) + a.y.abs_diff(b.y) + a.z.abs_diff(b.z)) as i32
+        ((a.x.abs_diff(b.x).pow(2) + a.y.abs_diff(b.y).pow(2) + a.z.abs_diff(b.z).pow(2)) as f32)
+            .sqrt() as i32
     }
     let all_passable_tile_positions: BTreeSet<Position> = tiles
         .0
@@ -189,9 +192,9 @@ fn find_shortest_path(
         }
     }
 
-    match distances_from_start.get(&ending_position) {
-        Some(WithInfinity::Infinity) => None,
-        Some(WithInfinity::Normal(_distance)) => {
+    match distances_from_start.entry(ending_position).or_default() {
+        WithInfinity::Infinity => None,
+        WithInfinity::Normal(_distance) => {
             let mut current_position = ending_position;
             let mut path = VecDeque::new();
             loop {
@@ -207,6 +210,5 @@ fn find_shortest_path(
             }
             Some(path)
         }
-        None => panic!("it should always at least be Infinity"),
     }
 }

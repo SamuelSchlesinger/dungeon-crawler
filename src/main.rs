@@ -25,7 +25,7 @@ fn main() {
         )
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(2.))
+                .with_run_criteria(FixedTimestep::steps_per_second(6.))
                 .with_system(walk_enemies),
         )
         .add_system(move_camera)
@@ -41,8 +41,10 @@ fn main() {
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(1.))
-                .with_system(victory),
+                .with_system(victory)
+                .with_system(defeat),
         )
         .add_system_set(SystemSet::on_update(GameState::Victory).with_system(on_victory))
+        .add_system_set(SystemSet::on_update(GameState::Defeat).with_system(on_defeat))
         .run();
 }

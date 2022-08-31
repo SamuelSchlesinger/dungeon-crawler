@@ -40,7 +40,7 @@ pub fn setup(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let test_map = maps::unbeatable();
+    let test_map = maps::avoidance();
 
     commands.insert_resource(Follow(false));
 
