@@ -14,10 +14,10 @@ use systems::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_startup_system(setup_menu)
+        .add_startup_system(setup)
         .add_state(GameState::Menu)
         .add_system(menu)
-        .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup))
+        .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup_play))
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(30.))
@@ -27,7 +27,7 @@ fn main() {
         )
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(2.))
+                .with_run_criteria(FixedTimestep::steps_per_second(10.))
                 .with_system(walk_enemies),
         )
         .add_system(move_camera)
@@ -42,7 +42,7 @@ fn main() {
         .add_system(track_mouse_movement)
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(1.))
+                .with_run_criteria(FixedTimestep::steps_per_second(10.))
                 .with_system(victory)
                 .with_system(defeat),
         )

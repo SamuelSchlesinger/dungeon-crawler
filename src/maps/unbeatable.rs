@@ -1,7 +1,6 @@
-use itertools::Itertools;
-
 use crate::components::Position;
 use crate::map;
+use itertools::Itertools;
 
 pub fn unbeatable() -> map::Map {
     let border_tile = map::Tile {
@@ -11,7 +10,7 @@ pub fn unbeatable() -> map::Map {
     map::Map {
         player_sprite: 71,
         room: map::Room {
-            initial_position: Position { x: 1, y: 1, z: 0 },
+            initial_position: Position { x: 0, y: 0, z: 0 },
             tiles: (-10i32..10)
                 .flat_map(|k| {
                     (-(10 - k.abs())..(10 - k.abs()))
@@ -128,15 +127,23 @@ pub fn unbeatable() -> map::Map {
                     };
                     vec![
                         make_enemy(5, 5, k),
+                        make_enemy(4, 5, k),
+                        make_enemy(5, 4, k),
                         make_enemy(-5, 5, k),
+                        make_enemy(-4, 5, k),
+                        make_enemy(-5, 4, k),
                         make_enemy(-5, -5, k),
+                        make_enemy(-4, -5, k),
+                        make_enemy(-5, -4, k),
                         make_enemy(5, -5, k),
+                        make_enemy(4, -5, k),
+                        make_enemy(5, -4, k),
                     ]
                 })
                 .collect(),
         },
         player_health: 4000,
-        player_strength: 20,
+        player_strength: 100,
         victory_condition: map::VictoryCondition::Or(vec![
             map::VictoryCondition::Extermination,
             map::VictoryCondition::Arrival(Position { x: 0, y: 0, z: 9 }),
