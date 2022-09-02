@@ -20,14 +20,14 @@ fn main() {
         .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup_play))
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(30.))
+                .with_run_criteria(FixedTimestep::steps_per_second(60.))
                 .with_system(follow.before(animate_sprites))
                 .with_system(animate_sprites)
                 .with_system(display_health),
         )
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(10.))
+                .with_run_criteria(FixedTimestep::steps_per_second(4.))
                 .with_system(walk_enemies),
         )
         .add_system(move_camera)
@@ -36,7 +36,7 @@ fn main() {
         .add_system(set_visibility)
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(1.))
+                .with_run_criteria(FixedTimestep::steps_per_second(3.))
                 .with_system(combat),
         )
         .add_system(track_mouse_movement)

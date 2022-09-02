@@ -10,7 +10,7 @@ pub fn unbeatable() -> map::Map {
     map::Map {
         player_sprite: 71,
         room: map::Room {
-            initial_position: Position { x: 0, y: 0, z: 0 },
+            initial_position: Position { x: 0, y: 0, z: -9 },
             tiles: (-10i32..10)
                 .flat_map(|k| {
                     (-(10 - k.abs())..(10 - k.abs()))
@@ -143,7 +143,7 @@ pub fn unbeatable() -> map::Map {
                 .collect(),
         },
         player_health: 4000,
-        player_strength: 100,
+        player_strength: 10,
         victory_condition: map::VictoryCondition::Or(vec![
             map::VictoryCondition::Extermination,
             map::VictoryCondition::Arrival(Position { x: 0, y: 0, z: 9 }),

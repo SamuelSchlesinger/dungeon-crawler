@@ -41,7 +41,7 @@ pub fn avoidance() -> Map {
 
     Map {
         room,
-        player_health: 100,
+        player_health: 200,
         player_strength: 0,
         player_sprite: 71,
         victory_condition: VictoryCondition::Arrival(Position::new(20, 5, 0)),

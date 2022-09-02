@@ -12,7 +12,7 @@ pub fn combat(
         (Entity, &Strength, &Position, &mut Health),
         (With<Enemy>, Without<Player>),
     >,
-    text_query: Query<(Entity, &TextOverEntity)>,
+    text_query: Query<(Entity, &HealthBar)>,
 ) {
     let (player_entity, player_position, player_strength, mut player_health) =
         if let Some((player_entity, position, strength, health)) = player_query.iter_mut().next() {
@@ -48,9 +48,9 @@ pub fn combat(
 
     if health.0 <= 0 {
         commands.entity(*entity).despawn();
-        for (text_entity, TextOverEntity(other_entity)) in text_query.iter() {
+        for (health_bar_entity, HealthBar(other_entity)) in text_query.iter() {
             if other_entity == entity {
-                commands.entity(text_entity).despawn();
+                commands.entity(health_bar_entity).despawn();
             }
         }
         // TODO Spawn dead body for coolness

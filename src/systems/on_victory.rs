@@ -6,7 +6,7 @@ pub fn on_victory(
     mut commands: Commands,
     windows: Res<Windows>,
     asset_server: Res<AssetServer>,
-    entities: Query<Entity, Or<(With<Position>, With<TextOverEntity>)>>,
+    entities: Query<Entity, Or<(With<Position>, With<HealthBar>)>>,
 ) {
     for entity in entities.iter() {
         commands.entity(entity).despawn();

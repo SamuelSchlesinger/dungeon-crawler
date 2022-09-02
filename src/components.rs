@@ -7,13 +7,16 @@ use std::{
 };
 
 #[derive(Component, Debug)]
-pub struct TextOverEntity(pub Entity);
+pub struct HealthBar(pub Entity);
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct Strength(pub i32);
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct Health(pub i32);
+
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct OriginalHealth(pub i32);
 
 #[derive(
     Component,

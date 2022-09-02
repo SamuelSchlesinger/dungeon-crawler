@@ -52,6 +52,9 @@ pub fn setup_play(
     test_map: Res<map::Map>,
     asset_server: Res<AssetServer>,
     menu_query: Query<Entity, With<Menu>>,
+    scale_factor: Res<ScaleFactor>,
+    mut floor: ResMut<Floor>,
+    mut camera: Query<&mut Transform, With<Camera>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut tiles: ResMut<Tiles>,
     mut enemies: ResMut<Enemies>,
@@ -64,6 +67,18 @@ pub fn setup_play(
     let tiles_texture_handle = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
 
     let room = test_map.room.clone();
+
+    if let Some(mut transform) = camera.iter_mut().next() {
+        transform.translation = Vec3::new(
+            room.initial_position.x as f32 * scale_factor.0,
+            room.initial_position.x as f32 * scale_factor.0,
+            transform.translation.z,
+        )
+    } else {
+        panic!("no camera");
+    }
+
+    floor.0 = room.initial_position.z;
 
     for (Position { x, y, z }, tile) in (&room.tiles).into_iter() {
         let entity = commands
@@ -135,6 +150,7 @@ pub fn setup_play(
             .insert(WakeZone(enemy.wake_zone.clone()))
             .insert(Awake(false))
             .insert(Health(enemy.health as i32))
+            .insert(OriginalHealth(enemy.health as i32))
             .insert(Strength(enemy.strength as i32))
             .insert(Enemy)
             .insert(MovementPath {
@@ -146,28 +162,23 @@ pub fn setup_play(
             .id();
 
         commands
-            .spawn_bundle(
-                TextBundle::from_section(
-                    format!("health: {}", enemy.health),
-                    TextStyle {
-                        font: asset_server.load("fonts/FreeMono.ttf"),
-                        font_size: 22.0,
-                        color: Color::GREEN,
-                    },
-                )
-                .with_text_alignment(TextAlignment::BOTTOM_RIGHT)
-                .with_style(Style {
-                    align_self: AlignSelf::FlexEnd,
-                    position_type: PositionType::Absolute,
-                    position: UiRect {
-                        bottom: Val::Px(*x as f32 - 10.),
-                        left: Val::Px(*y as f32 + INITIAL_SCALE_FACTOR),
-                        ..default()
-                    },
+            .spawn_bundle(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(0., 1., 0.),
+                    custom_size: Some(Vec2::new(
+                        INITIAL_SCALE_FACTOR as f32 / 2.,
+                        INITIAL_SCALE_FACTOR as f32 / 8.,
+                    )),
                     ..default()
-                }),
-            )
-            .insert(TextOverEntity(enemy_id));
+                },
+                transform: Transform::from_xyz(
+                    (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                    (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                    0.05,
+                ),
+                ..default()
+            })
+            .insert(HealthBar(enemy_id));
         enemies.insert(
             Position {
                 x: *x,
@@ -197,6 +208,7 @@ pub fn setup_play(
         .insert(room.initial_position.clone())
         .insert(Player)
         .insert(Health(test_map.player_health as i32))
+        .insert(OriginalHealth(test_map.player_health as i32))
         .insert(Strength(test_map.player_strength as i32))
         .insert(Passable(false))
         .insert(SpriteIndex(test_map.player_sprite as usize))
@@ -204,26 +216,21 @@ pub fn setup_play(
         .id();
 
     commands
-        .spawn_bundle(
-            TextBundle::from_section(
-                format!("health: {}", test_map.player_health),
-                TextStyle {
-                    font: asset_server.load("fonts/FreeMono.ttf"),
-                    font_size: 22.0,
-                    color: Color::GREEN,
-                },
-            )
-            .with_text_alignment(TextAlignment::BOTTOM_RIGHT)
-            .with_style(Style {
-                align_self: AlignSelf::FlexEnd,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    bottom: Val::Px(10.),
-                    left: Val::Px(10.),
-                    ..default()
-                },
+        .spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgb(0., 1., 0.),
+                custom_size: Some(Vec2::new(
+                    INITIAL_SCALE_FACTOR as f32 / 2.,
+                    INITIAL_SCALE_FACTOR as f32 / 8.,
+                )),
                 ..default()
-            }),
-        )
-        .insert(TextOverEntity(player_id));
+            },
+            transform: Transform::from_xyz(
+                (initial_position.x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                (initial_position.y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                0.05,
+            ),
+            ..default()
+        })
+        .insert(HealthBar(player_id));
 }
