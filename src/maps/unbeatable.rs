@@ -8,7 +8,7 @@ pub fn unbeatable() -> map::Map {
         passable: false,
     };
     map::Map {
-        player_sprite: 71,
+        player_sprite: 31 * 64 + 20,
         room: map::Room {
             initial_position: Position { x: 0, y: 0, z: -9 },
             tiles: (-10i32..10)
