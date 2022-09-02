@@ -51,7 +51,6 @@ pub fn setup_play(
     mut commands: Commands,
     test_map: Res<map::Map>,
     asset_server: Res<AssetServer>,
-    menu_query: Query<Entity, With<Menu>>,
     scale_factor: Res<ScaleFactor>,
     mut floor: ResMut<Floor>,
     mut camera: Query<&mut Transform, With<Camera>>,
@@ -59,9 +58,6 @@ pub fn setup_play(
     mut tiles: ResMut<Tiles>,
     mut enemies: ResMut<Enemies>,
 ) {
-    for entity in menu_query.iter() {
-        commands.entity(entity).despawn();
-    }
     let initial_position = test_map.room.initial_position;
 
     let tiles_texture_handle = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
