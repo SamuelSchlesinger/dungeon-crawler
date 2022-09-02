@@ -1,15 +1,27 @@
 use bevy::prelude::*;
 
 use crate::components::*;
-use crate::maps;
+use crate::map;
 use crate::resources::*;
 
 const INITIAL_SCALE_FACTOR: f32 = 50.;
 
-fn initialize_resources(commands: &mut Commands) {
+pub fn initialize_resources(
+    mut commands: &mut Commands,
+    map: &map::Map,
+    initial_position: Position,
+    tiles_texture_handle: &Handle<TextureAtlas>,
+) {
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
     commands.insert_resource(ClearColor(Color::rgb(0., 0., 0.)));
+    commands.insert_resource(Follow(false));
+    commands.insert_resource(Floor(initial_position.z));
+    commands.insert_resource(Tiles::new());
+    commands.insert_resource(Enemies::new());
+    commands.insert_resource(map.clone());
+    create_camera(&mut commands, initial_position);
+    commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
 }
 
 fn create_camera(commands: &mut Commands, initial_position: Position) {
@@ -25,7 +37,7 @@ fn create_camera(commands: &mut Commands, initial_position: Position) {
     commands.spawn_bundle(camera_2d_bundle).insert(Camera);
 }
 
-fn get_tiles_texture_handle(
+pub fn get_tiles_texture_handle(
     asset_server: &Res<AssetServer>,
     texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) -> Handle<TextureAtlas> {
@@ -37,29 +49,21 @@ fn get_tiles_texture_handle(
 
 pub fn setup(
     mut commands: Commands,
+    test_map: Res<map::Map>,
     asset_server: Res<AssetServer>,
+    menu_query: Query<Entity, With<Menu>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut tiles: ResMut<Tiles>,
+    mut enemies: ResMut<Enemies>,
 ) {
-    let test_map = maps::avoidance();
-
-    commands.insert_resource(Follow(false));
-
+    for entity in menu_query.iter() {
+        commands.entity(entity).despawn();
+    }
     let initial_position = test_map.room.initial_position;
-
-    create_camera(&mut commands, initial_position);
-
-    initialize_resources(&mut commands);
-
-    commands.insert_resource(Floor(initial_position.z));
-
-    commands.insert_resource(test_map.victory_condition);
 
     let tiles_texture_handle = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
 
-    commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
-
     let room = test_map.room.clone();
-    let mut tiles = Tiles::new();
 
     for (Position { x, y, z }, tile) in (&room.tiles).into_iter() {
         let entity = commands
@@ -102,10 +106,6 @@ pub fn setup(
             },
         );
     }
-
-    commands.insert_resource(tiles);
-
-    let mut enemies = Enemies::new();
 
     for (Position { x, y, z }, enemy) in (&room.enemies).into_iter() {
         let enemy_id = commands
@@ -177,8 +177,6 @@ pub fn setup(
             enemy_id,
         );
     }
-
-    commands.insert_resource(enemies);
 
     let player_id = commands
         .spawn_bundle(SpriteSheetBundle {

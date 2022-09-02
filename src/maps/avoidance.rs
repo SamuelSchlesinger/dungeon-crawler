@@ -28,15 +28,17 @@ pub fn avoidance() -> Map {
     for y in 0..=10 {
         let enemy_position = Position::new(15, y, 0);
 
-        room.add_enemy(
-            enemy_position.clone(),
-            Enemy::new(
-                74,
-                100,
-                100,
-                Enemy::circular_wake_zone(enemy_position.clone(), 5),
-            ),
-        );
+        if y % 2 == 0 {
+            room.add_enemy(
+                enemy_position.clone(),
+                Enemy::new(
+                    74,
+                    100,
+                    100,
+                    Enemy::circular_wake_zone(enemy_position.clone(), 5),
+                ),
+            );
+        }
     }
 
     Map {

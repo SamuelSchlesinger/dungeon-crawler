@@ -1,16 +1,18 @@
 use bevy::prelude::*;
 
 use crate::components::*;
-use crate::resources::*;
+use crate::map::{Map, VictoryCondition};
 use crate::state::GameState;
 
 pub fn victory(
-    victory_condition: Res<VictoryCondition>,
+    map: Res<Map>,
     player_query: Query<&Position, With<Player>>,
     enemy_query: Query<Entity, (With<Enemy>, Without<Player>)>,
     mut game_state: ResMut<State<GameState>>,
 ) {
-    if determine_victory(&victory_condition, &player_query, &enemy_query) {
+    if *game_state.current() == GameState::Playing
+        && determine_victory(&map.victory_condition, &player_query, &enemy_query)
+    {
         game_state.set(GameState::Victory).unwrap();
     }
 }

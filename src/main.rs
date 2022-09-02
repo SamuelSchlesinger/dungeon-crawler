@@ -17,7 +17,7 @@ fn main() {
         .add_startup_system(setup_menu)
         .add_state(GameState::Menu)
         .add_system(menu)
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(setup))
+        .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup))
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(30.))
@@ -27,7 +27,7 @@ fn main() {
         )
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(6.))
+                .with_run_criteria(FixedTimestep::steps_per_second(2.))
                 .with_system(walk_enemies),
         )
         .add_system(move_camera)
@@ -46,7 +46,7 @@ fn main() {
                 .with_system(victory)
                 .with_system(defeat),
         )
-        .add_system_set(SystemSet::on_update(GameState::Victory).with_system(on_victory))
-        .add_system_set(SystemSet::on_update(GameState::Defeat).with_system(on_defeat))
+        .add_system_set(SystemSet::on_enter(GameState::Victory).with_system(on_victory))
+        .add_system_set(SystemSet::on_enter(GameState::Defeat).with_system(on_defeat))
         .run();
 }

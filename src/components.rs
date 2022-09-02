@@ -143,3 +143,6 @@ pub struct MovementPath {
     pub age: usize,
     pub path: Option<VecDeque<Position>>,
 }
+
+#[derive(Component)]
+pub struct Menu;
