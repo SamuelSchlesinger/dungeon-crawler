@@ -39,6 +39,29 @@ impl Tiles {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct CachedHealth {
+    pub entity: Entity,
+    pub health: i32,
+}
+
+#[derive(Debug)]
+pub struct Healths(pub BTreeMap<Position, CachedHealth>);
+
+impl Healths {
+    pub fn new() -> Self {
+        Healths(BTreeMap::new())
+    }
+
+    pub fn insert(&mut self, position: Position, cached_health: CachedHealth) {
+        self.0.insert(position, cached_health);
+    }
+
+    pub fn remove(&mut self, position: Position) -> Option<CachedHealth> {
+        self.0.remove(&position)
+    }
+}
+
 #[derive(Debug)]
 pub struct Enemies {
     entity_positions: BTreeMap<Entity, Position>,

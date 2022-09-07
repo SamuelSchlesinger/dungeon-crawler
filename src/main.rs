@@ -33,6 +33,7 @@ fn main() {
         .add_system(move_camera)
         .add_system(move_player)
         .add_system(set_follow)
+        .add_system(health)
         .add_system(set_visibility)
         .add_system_set(
             SystemSet::new()

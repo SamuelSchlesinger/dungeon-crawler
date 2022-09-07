@@ -10,6 +10,7 @@ pub struct Room {
     pub initial_position: Position,
     pub tiles: PositionMap<Tile>,
     pub enemies: PositionMap<Enemy>,
+    pub healths: PositionMap<Health>,
 }
 
 impl Room {
@@ -18,6 +19,7 @@ impl Room {
             initial_position,
             tiles: PositionMap(BTreeMap::new()),
             enemies: PositionMap(BTreeMap::new()),
+            healths: PositionMap(BTreeMap::new()),
         }
     }
 
@@ -28,6 +30,11 @@ impl Room {
 
     pub fn add_enemy(&mut self, position: Position, enemy: Enemy) -> &mut Self {
         self.enemies.0.insert(position, enemy);
+        self
+    }
+
+    pub fn add_health(&mut self, position: Position, health: Health) -> &mut Self {
+        self.healths.0.insert(position, health);
         self
     }
 }
@@ -53,6 +60,12 @@ pub struct Enemy {
     pub health: u32,
     pub strength: u32,
     pub wake_zone: BTreeSet<Position>,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
+pub struct Health {
+    pub sprite_index: u32,
+    pub health: u32,
 }
 
 impl Enemy {

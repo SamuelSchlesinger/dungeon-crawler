@@ -149,3 +149,6 @@ pub struct MovementPath {
 
 #[derive(Component)]
 pub struct Menu;
+
+#[derive(Component)]
+pub struct HealthGain;

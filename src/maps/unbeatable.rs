@@ -11,6 +11,15 @@ pub fn unbeatable() -> map::Map {
         player_sprite: 31 * 64 + 20,
         room: map::Room {
             initial_position: Position { x: 0, y: 0, z: -9 },
+            healths: vec![(
+                Position::new(1, 1, 0),
+                map::Health {
+                    sprite_index: 64 * 23 + 45,
+                    health: 10,
+                },
+            )]
+            .into_iter()
+            .collect(),
             tiles: (-10i32..10)
                 .flat_map(|k| {
                     (-(10 - k.abs())..(10 - k.abs()))

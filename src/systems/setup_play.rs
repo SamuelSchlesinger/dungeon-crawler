@@ -19,6 +19,7 @@ pub fn initialize_resources(
     commands.insert_resource(Floor(initial_position.z));
     commands.insert_resource(Tiles::new());
     commands.insert_resource(Enemies::new());
+    commands.insert_resource(Healths::new());
     commands.insert_resource(map.clone());
     create_camera(&mut commands, initial_position);
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
@@ -57,6 +58,7 @@ pub fn setup_play(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut tiles: ResMut<Tiles>,
     mut enemies: ResMut<Enemies>,
+    mut healths: ResMut<Healths>,
 ) {
     let initial_position = test_map.room.initial_position;
 
@@ -182,6 +184,53 @@ pub fn setup_play(
                 z: *z,
             },
             enemy_id,
+        );
+    }
+
+    for (Position { x, y, z }, health) in (&room.healths).into_iter() {
+        let health_id = commands
+            .spawn_bundle(SpriteSheetBundle {
+                transform: Transform::from_xyz(
+                    (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                    (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                    0.01,
+                ),
+                texture_atlas: tiles_texture_handle.clone(),
+                sprite: TextureAtlasSprite {
+                    index: health.sprite_index as usize,
+                    custom_size: Some(Vec2::new(INITIAL_SCALE_FACTOR, INITIAL_SCALE_FACTOR)),
+                    ..default()
+                },
+                visibility: Visibility {
+                    is_visible: *z == initial_position.z,
+                },
+                ..default()
+            })
+            .insert(Position {
+                x: *x,
+                y: *y,
+                z: *z,
+            })
+            .insert(Passable(true))
+            .insert(Health(health.health as i32))
+            .insert(HealthGain)
+            .insert(MovementPath {
+                age: 20,
+                path: None,
+            })
+            .insert(SpriteIndex(health.sprite_index as usize))
+            .insert(ZLevel(0.005))
+            .id();
+        healths.insert(
+            Position {
+                x: *x,
+                y: *y,
+                z: *z,
+            },
+            CachedHealth {
+                entity: health_id,
+                health: health.health as i32,
+            },
         );
     }
 
