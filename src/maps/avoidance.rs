@@ -2,10 +2,9 @@ use crate::components::Position;
 use crate::map::*;
 
 pub fn avoidance() -> Map {
-    let mut room = Room::new(Position::new(0, 0, 0));
-    let victory_position = Position::new(0, 5, 9);
-
     const N_FLOORS: i32 = 10;
+    let mut room = Room::new(Position::new(5, 5, 0));
+    let victory_position = Position::new(0, 5, N_FLOORS * 2 - 1);
 
     for z in 0..(N_FLOORS * 2) {
         if z % 2 == 0 {
@@ -69,8 +68,8 @@ pub fn avoidance() -> Map {
 
     Map {
         room,
-        player_health: 200,
-        player_strength: 0,
+        player_health: 1000,
+        player_strength: 20,
         player_sprite: 31 * 64 + 20,
         victory_condition: VictoryCondition::Arrival(victory_position),
     }
