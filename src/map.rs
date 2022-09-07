@@ -119,6 +119,7 @@ pub enum VictoryCondition {
     Extermination,
     Or(Vec<VictoryCondition>),
     And(Vec<VictoryCondition>),
+    Unwinnable,
 }
 
 #[derive(PartialEq, Eq, Clone)]

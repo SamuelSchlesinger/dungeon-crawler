@@ -32,6 +32,7 @@ fn determine_victory(
             VictoryCondition::Or(ref cs) => {
                 cs.iter().any(|c| determine_victory(c, player, enemy_query))
             }
+            VictoryCondition::Unwinnable => false,
         }
     } else {
         false

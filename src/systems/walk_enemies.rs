@@ -135,7 +135,7 @@ fn with_infinity_test() {
 
 fn find_shortest_path(
     tiles: &Tiles,
-    enemies: &mut Enemies,
+    enemies: &Enemies,
     starting_position: Position,
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
