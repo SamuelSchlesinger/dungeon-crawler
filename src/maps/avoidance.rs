@@ -23,6 +23,15 @@ pub fn avoidance() -> Map {
                     } else {
                         room.add_tile(Position::new(x, y, z), Tile::new(960, true));
                     }
+                    if x == 10 && y == 5 {
+                        room.add_health(
+                            Position::new(x, y, z),
+                            Health {
+                                sprite_index: 64 * 23 + 45,
+                                health: 100,
+                            },
+                        );
+                    }
                 }
             }
 
