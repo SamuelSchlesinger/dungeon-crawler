@@ -8,7 +8,7 @@ use bevy::prelude::*;
 pub struct Follow(pub bool);
 
 #[derive(Debug)]
-pub struct Floor(pub i32);
+pub struct Floor(pub i64);
 
 #[derive(Debug)]
 pub struct ScaleFactor(pub f32);
@@ -42,7 +42,7 @@ impl Tiles {
 #[derive(Debug, Copy, Clone)]
 pub struct CachedHealth {
     pub entity: Entity,
-    pub health: i32,
+    pub health: i64,
 }
 
 #[derive(Debug)]
@@ -135,9 +135,9 @@ fn test_enemies() {
     for i in 0..30u32 {
         enemies.insert(
             Position {
-                x: (i / 4) as i32,
-                y: (i / 4) as i32,
-                z: (i / 4) as i32,
+                x: (i / 4) as i64,
+                y: (i / 4) as i64,
+                z: (i / 4) as i64,
             },
             Entity::from_raw(i),
         );
@@ -145,9 +145,9 @@ fn test_enemies() {
     for i in 0..30u32 {
         enemies.insert(
             Position {
-                x: (i / 4 + 1) as i32,
-                y: (i / 4 + 1) as i32,
-                z: (i / 4 + 1) as i32,
+                x: (i / 4 + 1) as i64,
+                y: (i / 4 + 1) as i64,
+                z: (i / 4 + 1) as i64,
             },
             Entity::from_raw(i),
         );

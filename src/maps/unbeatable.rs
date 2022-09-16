@@ -20,7 +20,7 @@ pub fn unbeatable() -> map::Map {
             )]
             .into_iter()
             .collect(),
-            tiles: (-10i32..10)
+            tiles: (-10i64..10)
                 .flat_map(|k| {
                     (-(10 - k.abs())..(10 - k.abs()))
                         .map(|j| (k, j))
@@ -41,7 +41,7 @@ pub fn unbeatable() -> map::Map {
                     )
                 })
                 .chain(
-                    (-10i32..=10)
+                    (-10i64..=10)
                         .flat_map(|k| {
                             (-(10 - k.abs())..=(10 - k.abs()))
                                 .map(|i| (i, k))
@@ -59,7 +59,7 @@ pub fn unbeatable() -> map::Map {
                         }),
                 )
                 .chain(
-                    (-10i32..=10)
+                    (-10i64..=10)
                         .flat_map(|k| {
                             (-(10 - k.abs())..=(10 - k.abs()))
                                 .map(|i| (i, k))
@@ -77,7 +77,7 @@ pub fn unbeatable() -> map::Map {
                         }),
                 )
                 .chain(
-                    (-10i32..=10)
+                    (-10i64..=10)
                         .flat_map(|k| {
                             (-(10 - k.abs())..=(10 - k.abs()))
                                 .map(|i| (i, k))
@@ -95,7 +95,7 @@ pub fn unbeatable() -> map::Map {
                         }),
                 )
                 .chain(
-                    (-10i32..=10)
+                    (-10i64..=10)
                         .flat_map(|k| {
                             (-(10 - k.abs())..=(10 - k.abs()))
                                 .map(|i| (i, k))
@@ -115,7 +115,7 @@ pub fn unbeatable() -> map::Map {
                 .collect(),
             enemies: (-3..=3)
                 .flat_map(|k| {
-                    let make_enemy = |x: i32, y: i32, z: i32| {
+                    let make_enemy = |x: i64, y: i64, z: i64| {
                         (
                             Position { x, y, z },
                             map::Enemy {

@@ -4,6 +4,8 @@ use std::collections::VecDeque;
 use std::ops::Add;
 
 use bevy::prelude::*;
+use positioning::pathfinding;
+use positioning::pathfinding::Heuristic;
 use priority_queue::DoublePriorityQueue;
 
 use crate::components::*;
@@ -125,8 +127,8 @@ impl<I: Add<I, Output = I>> Add<WithInfinity<I>> for WithInfinity<I> {
 
 #[test]
 fn with_infinity_test() {
-    let x = WithInfinity::Normal(1i32);
-    let z = WithInfinity::Normal(0i32);
+    let x = WithInfinity::Normal(1i64);
+    let z = WithInfinity::Normal(0i64);
     let y = WithInfinity::Infinity;
     assert!(y > x);
     assert!(z < x);
@@ -139,9 +141,9 @@ fn find_shortest_path(
     starting_position: Position,
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
-    fn dist_2d(a: Position, b: Position) -> i32 {
+    fn dist_2d(a: Position, b: Position) -> i64 {
         ((a.x.abs_diff(b.x).pow(2) + a.y.abs_diff(b.y).pow(2) + a.z.abs_diff(b.z).pow(2)) as f32)
-            .sqrt() as i32
+            .sqrt() as i64
     }
     let all_passable_tile_positions: BTreeSet<Position> = tiles
         .0
@@ -155,60 +157,9 @@ fn find_shortest_path(
         })
         .copied()
         .collect();
-    let mut distances_from_start: BTreeMap<Position, WithInfinity<i32>> = BTreeMap::new();
-    let mut predecessor: BTreeMap<Position, Option<Position>> = BTreeMap::new();
-    let mut queue: DoublePriorityQueue<Position, WithInfinity<i32>> = DoublePriorityQueue::new();
-    distances_from_start.insert(starting_position, WithInfinity::Normal(0));
-    queue.push(
+    pathfinding::HammingDistance.find_shortest_path(
+        &all_passable_tile_positions,
         starting_position,
-        WithInfinity::Normal(0) + WithInfinity::Normal(dist_2d(starting_position, ending_position)),
-    );
-
-    if !all_passable_tile_positions.contains(&ending_position) {
-        return None;
-    }
-
-    loop {
-        match queue.pop_min() {
-            None => {
-                break;
-            }
-            Some((position, distance)) => {
-                for v in position
-                    .adjacent()
-                    .filter(|v| all_passable_tile_positions.contains(v))
-                {
-                    let alt = distance + WithInfinity::Normal(1);
-                    if alt < *distances_from_start.entry(v).or_default() {
-                        let halt = alt + WithInfinity::Normal(dist_2d(position, ending_position));
-                        distances_from_start.insert(position, alt);
-                        predecessor.insert(v, Some(position));
-                        if queue.change_priority(&v, halt).is_none() {
-                            queue.push(v, halt);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    match distances_from_start.entry(ending_position).or_default() {
-        WithInfinity::Infinity => None,
-        WithInfinity::Normal(_distance) => {
-            let mut current_position = ending_position;
-            let mut path = VecDeque::new();
-            loop {
-                if current_position == starting_position {
-                    break;
-                }
-                path.push_front(current_position);
-                if let Some(Some(pre)) = predecessor.get(&current_position) {
-                    current_position = *pre;
-                } else {
-                    panic!("should always have a path home");
-                }
-            }
-            Some(path)
-        }
-    }
+        ending_position,
+    )
 }

@@ -18,11 +18,11 @@ pub fn procedural() -> Map {
 }
 
 // TODO
-fn compute_reasonable_player_strength(room: &Room) -> u32 {
+fn compute_reasonable_player_strength(room: &Room) -> u64 {
     10
 }
 
 // TODO
-fn compute_reasonable_player_health(room: &Room) -> u32 {
+fn compute_reasonable_player_health(room: &Room) -> u64 {
     10
 }

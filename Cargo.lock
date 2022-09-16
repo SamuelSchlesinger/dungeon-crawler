@@ -1283,6 +1283,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "itertools",
+ "positioning",
  "priority-queue",
  "rand",
  "serde",
@@ -2406,6 +2407,17 @@ dependencies = [
  "crc32fast",
  "deflate",
  "miniz_oxide",
+]
+
+[[package]]
+name = "positioning"
+version = "0.1.0"
+source = "git+https://github.com/SamuelSchlesinger/positioning#254e5e86dbcd9afa7d0b75cf0834777f6182b004"
+dependencies = [
+ "bevy",
+ "itertools",
+ "priority-queue",
+ "serde",
 ]
 
 [[package]]

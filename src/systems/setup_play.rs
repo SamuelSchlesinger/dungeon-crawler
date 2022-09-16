@@ -147,9 +147,9 @@ pub fn setup_play(
             .insert(Passable(false))
             .insert(WakeZone(enemy.wake_zone.clone()))
             .insert(Awake(false))
-            .insert(Health(enemy.health as i32))
-            .insert(OriginalHealth(enemy.health as i32))
-            .insert(Strength(enemy.strength as i32))
+            .insert(Health(enemy.health as i64))
+            .insert(OriginalHealth(enemy.health as i64))
+            .insert(Strength(enemy.strength as i64))
             .insert(Enemy)
             .insert(MovementPath {
                 age: 20,
@@ -212,7 +212,7 @@ pub fn setup_play(
                 z: *z,
             })
             .insert(Passable(true))
-            .insert(Health(health.health as i32))
+            .insert(Health(health.health as i64))
             .insert(HealthGain)
             .insert(MovementPath {
                 age: 20,
@@ -229,7 +229,7 @@ pub fn setup_play(
             },
             CachedHealth {
                 entity: health_id,
-                health: health.health as i32,
+                health: health.health as i64,
             },
         );
     }
@@ -252,9 +252,9 @@ pub fn setup_play(
         })
         .insert(room.initial_position.clone())
         .insert(Player)
-        .insert(Health(test_map.player_health as i32))
-        .insert(OriginalHealth(test_map.player_health as i32))
-        .insert(Strength(test_map.player_strength as i32))
+        .insert(Health(test_map.player_health as i64))
+        .insert(OriginalHealth(test_map.player_health as i64))
+        .insert(Strength(test_map.player_strength as i64))
         .insert(Passable(false))
         .insert(SpriteIndex(test_map.player_sprite as usize))
         .insert(ZLevel(0.02))

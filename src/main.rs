@@ -27,7 +27,7 @@ fn main() {
         )
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::steps_per_second(6.))
+                .with_run_criteria(FixedTimestep::steps_per_second(2.))
                 .with_system(walk_enemies),
         )
         .add_system(move_camera)

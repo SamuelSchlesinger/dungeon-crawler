@@ -2,7 +2,7 @@ use crate::components::Position;
 use crate::map::*;
 
 pub fn avoidance() -> Map {
-    const N_FLOORS: i32 = 10;
+    const N_FLOORS: i64 = 10;
     let mut room = Room::new(Position::new(5, 5, 0));
     let victory_position = Position::new(0, 5, N_FLOORS * 2 - 1);
 

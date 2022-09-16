@@ -41,12 +41,12 @@ impl Room {
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
 pub struct Tile {
-    pub sprite_index: u32,
+    pub sprite_index: u64,
     pub passable: bool,
 }
 
 impl Tile {
-    pub fn new(sprite_index: u32, passable: bool) -> Self {
+    pub fn new(sprite_index: u64, passable: bool) -> Self {
         Tile {
             sprite_index,
             passable,
@@ -56,23 +56,23 @@ impl Tile {
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
 pub struct Enemy {
-    pub sprite_index: u32,
-    pub health: u32,
-    pub strength: u32,
+    pub sprite_index: u64,
+    pub health: u64,
+    pub strength: u64,
     pub wake_zone: BTreeSet<Position>,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
 pub struct Health {
-    pub sprite_index: u32,
-    pub health: u32,
+    pub sprite_index: u64,
+    pub health: u64,
 }
 
 impl Enemy {
     pub fn new(
-        sprite_index: u32,
-        health: u32,
-        strength: u32,
+        sprite_index: u64,
+        health: u64,
+        strength: u64,
         wake_zone: BTreeSet<Position>,
     ) -> Self {
         Enemy {
@@ -83,11 +83,11 @@ impl Enemy {
         }
     }
 
-    pub fn circular_wake_zone(center: Position, radius: i32) -> BTreeSet<Position> {
+    pub fn circular_wake_zone(center: Position, radius: i64) -> BTreeSet<Position> {
         (-radius..=radius)
             .cartesian_product(-radius..=radius)
             .filter_map(|(dx, dy)| {
-                if (dx.pow(2) as f32 + dy.pow(2) as f32).sqrt() <= radius as f32 {
+                if (dx.pow(2) as f64 + dy.pow(2) as f64).sqrt() <= radius as f64 {
                     Some(Position {
                         x: center.x + dx,
                         y: center.y + dy,
@@ -102,14 +102,14 @@ impl Enemy {
 }
 
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
-pub struct ItemId(u32);
+pub struct ItemId(u64);
 
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct Map {
     pub room: Room,
-    pub player_health: u32,
-    pub player_strength: u32,
-    pub player_sprite: u32,
+    pub player_health: u64,
+    pub player_strength: u64,
+    pub player_sprite: u64,
     pub victory_condition: VictoryCondition,
 }
 
