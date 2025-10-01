@@ -71,6 +71,27 @@ pub struct Enemies {
 #[derive(Debug, Resource)]
 pub struct SpriteTexture(pub (Handle<Image>, Handle<TextureAtlasLayout>));
 
+#[derive(Debug, Resource, Clone)]
+pub struct Statistics {
+    pub enemies_killed: i64,
+    pub floors_completed: i64,
+    pub damage_taken: i64,
+    pub damage_dealt: i64,
+    pub health_collected: i64,
+}
+
+impl Statistics {
+    pub fn new() -> Self {
+        Statistics {
+            enemies_killed: 0,
+            floors_completed: 0,
+            damage_taken: 0,
+            damage_dealt: 0,
+            health_collected: 0,
+        }
+    }
+}
+
 impl Enemies {
     pub fn new() -> Self {
         Enemies {

@@ -12,7 +12,7 @@ pub fn setup(
         let map = maps::unbeatable();
         let initial_position = map.room.initial_position;
         let tiles_texture_handle = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
-        initialize_resources(&mut commands, &map, initial_position, &tiles_texture_handle);
+        initialize_resources(&mut commands, &map, initial_position, &tiles_texture_handle, None);
         commands
             .spawn((
                 Text::new("Dungeon Crawler!"),
@@ -60,6 +60,25 @@ pub fn setup(
                     position_type: PositionType::Absolute,
                     bottom: Val::Px(window.height() - 300.),
                     left: Val::Px(100.),
+                    ..default()
+                },
+                Menu,
+            ));
+
+        // Controls explanation
+        commands
+            .spawn((
+                Text::new("Controls: WASD=Move  Mouse=Target Enemy  Click=Attack  V=Avoidance"),
+                TextFont {
+                    font: asset_server.load("fonts/FreeMono.ttf"),
+                    font_size: 40.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.7, 0.7, 0.7)),
+                Node {
+                    position_type: PositionType::Absolute,
+                    bottom: Val::Px(20.),
+                    left: Val::Px(window.width() / 2. - 400.),
                     ..default()
                 },
                 Menu,

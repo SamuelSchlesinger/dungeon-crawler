@@ -11,6 +11,7 @@ pub fn initialize_resources(
     map: &map::Map,
     initial_position: Position,
     tiles_texture_handle: &(Handle<Image>, Handle<TextureAtlasLayout>),
+    existing_statistics: Option<Statistics>,
 ) {
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
@@ -23,6 +24,14 @@ pub fn initialize_resources(
     commands.insert_resource(map.clone());
     create_camera(&mut commands, initial_position);
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
+
+    // Initialize or restore statistics
+    if let Some(mut stats) = existing_statistics {
+        stats.floors_completed += 1;
+        commands.insert_resource(stats);
+    } else {
+        commands.insert_resource(Statistics::new());
+    }
 }
 
 fn create_camera(commands: &mut Commands, initial_position: Position) {
@@ -61,6 +70,7 @@ pub fn setup_play(
     mut tiles: ResMut<Tiles>,
     mut enemies: ResMut<Enemies>,
     mut healths: ResMut<Healths>,
+    statistics: Option<Res<Statistics>>,
 ) {
     let initial_position = test_map.room.initial_position;
 
@@ -125,45 +135,56 @@ pub fn setup_play(
     }
 
     for (Position { x, y, z }, enemy) in (&room.enemies).into_iter() {
-        let enemy_id = commands
-            .spawn((
-                Sprite::from_atlas_image(
-                    tiles_texture_image.clone(),
-                    TextureAtlas {
-                        layout: tiles_texture_layout.clone(),
-                        index: enemy.sprite_index as usize,
-                    },
-                ),
-                Transform::from_xyz(
-                    (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                    (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                    0.01,
-                ),
-                if *z == initial_position.z {
-                    Visibility::Visible
-                } else {
-                    Visibility::Hidden
+        // Randomize enemy type for variety, scale stats by floor
+        let enemy_type = EnemyType::random();
+        let (health, strength) = enemy_type.get_stats(floor.0.abs());
+        let sprite_idx = enemy_type.sprite_index();
+
+        let mut enemy_entity = commands.spawn((
+            Sprite::from_atlas_image(
+                tiles_texture_image.clone(),
+                TextureAtlas {
+                    layout: tiles_texture_layout.clone(),
+                    index: sprite_idx,
                 },
-                Position {
-                    x: *x,
-                    y: *y,
-                    z: *z,
-                },
-                Passable(false),
-                WakeZone(enemy.wake_zone.clone()),
-                Awake(false),
-                Health(enemy.health as i64),
-                OriginalHealth(enemy.health as i64),
-                Strength(enemy.strength as i64),
-                Enemy,
-                MovementPath {
-                    age: 20,
-                    path: None,
-                },
-                SpriteIndex(enemy.sprite_index as usize),
-                ZLevel(0.01),
-            ))
-            .id();
+            ),
+            Transform::from_xyz(
+                (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                0.01,
+            ),
+            if *z == initial_position.z {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            },
+            Position {
+                x: *x,
+                y: *y,
+                z: *z,
+            },
+            Passable(false),
+            WakeZone(enemy.wake_zone.clone()),
+            Awake(false),
+            Health(health),
+            OriginalHealth(health),
+            Strength(strength),
+            Enemy,
+        ));
+
+        // Add remaining components
+        enemy_entity.insert((
+            enemy_type,
+            AIBehavior::for_enemy_type(enemy_type),
+            MovementPath {
+                age: 20,
+                path: None,
+            },
+            SpriteIndex(sprite_idx),
+            ZLevel(0.01),
+        ));
+
+        let enemy_id = enemy_entity.id();
 
         commands
             .spawn((
@@ -284,4 +305,13 @@ pub fn setup_play(
             ),
             HealthBar(player_id),
         ));
+
+    // Initialize or update statistics
+    if let Some(stats) = statistics {
+        let mut new_stats = stats.clone();
+        new_stats.floors_completed += 1;
+        commands.insert_resource(new_stats);
+    } else {
+        commands.insert_resource(Statistics::new());
+    }
 }

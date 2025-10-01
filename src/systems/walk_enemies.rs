@@ -16,17 +16,30 @@ use crate::resources::*;
 pub fn walk_enemies(
     tiles: Res<Tiles>,
     mut enemies_query: Query<
-        (Entity, &mut Position, &Awake, &mut MovementPath),
+        (Entity, &mut Position, &Awake, &mut MovementPath, &AIBehavior, &Health, &OriginalHealth),
         (With<Enemy>, Without<Player>),
     >,
     mut enemies: ResMut<Enemies>,
     player: Query<&Position, With<Player>>,
 ) {
     if let Some(player_position) = player.iter().next() {
-        for (entity, mut position, awake, mut movement_path) in enemies_query.iter_mut() {
+        for (entity, mut position, awake, mut movement_path, ai_behavior, health, original_health) in enemies_query.iter_mut() {
             if awake.0 {
+                let health_fraction = health.0 as f32 / original_health.0 as f32;
+                let distance_to_player = ((*player_position - *position).x.abs() + (*player_position - *position).y.abs()) as f32;
+
+                // Defensive AI: retreat when low on health
+                let should_retreat = matches!(ai_behavior, AIBehavior::Defensive) && health_fraction < 0.3;
+
+                // Patrol AI: only chase when player is very close
+                let should_chase = match ai_behavior {
+                    AIBehavior::Aggressive => true,
+                    AIBehavior::Defensive => !should_retreat,
+                    AIBehavior::Patrol => distance_to_player < 5.0,
+                };
+
                 // attack!
-                if position.is_adjacent_to(*player_position) {
+                if position.is_adjacent_to(*player_position) && !should_retreat {
                     return;
                 }
                 // random motion
@@ -67,8 +80,25 @@ pub fn walk_enemies(
                         Some(path) => path.is_empty(),
                     }
                 {
-                    movement_path.path =
-                        find_shortest_path(&tiles, &mut enemies, *position, *player_position);
+                    // Calculate target position based on AI behavior
+                    let target_position = if should_retreat {
+                        // Move away from player
+                        let away_x = position.x + (position.x - player_position.x).signum();
+                        let away_y = position.y + (position.y - player_position.y).signum();
+                        Position { x: away_x, y: away_y, z: position.z }
+                    } else if should_chase {
+                        *player_position
+                    } else {
+                        // Patrol: random nearby position
+                        *position
+                    };
+
+                    if should_chase || should_retreat {
+                        movement_path.path =
+                            find_shortest_path(&tiles, &mut enemies, *position, target_position);
+                    } else {
+                        movement_path.path = None;
+                    }
                     movement_path.age = 0;
                 }
                 movement_path.age += rand::random::<usize>() % 3;

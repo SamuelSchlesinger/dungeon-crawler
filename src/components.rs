@@ -24,6 +24,23 @@ pub struct WakeZone(pub BTreeSet<Position>);
 #[derive(Component, Debug)]
 pub struct Awake(pub bool);
 
+#[derive(Component, Debug, Clone, Copy)]
+pub enum AIBehavior {
+    Aggressive,   // Always chase player
+    Defensive,    // Retreat when health < 30%
+    Patrol,       // Random movement, chase when close
+}
+
+impl AIBehavior {
+    pub fn for_enemy_type(enemy_type: EnemyType) -> Self {
+        match enemy_type {
+            EnemyType::Skeleton => AIBehavior::Aggressive,
+            EnemyType::Orc => AIBehavior::Patrol,
+            EnemyType::Ghost => AIBehavior::Defensive,
+        }
+    }
+}
+
 #[derive(Component, Debug)]
 pub struct ZLevel(pub f32);
 
@@ -32,6 +49,48 @@ pub struct SpriteIndex(pub usize);
 
 #[derive(Component, Debug)]
 pub struct Tile;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EnemyType {
+    Skeleton,  // Fast, weak (sprite: 2700)
+    Orc,       // Balanced (sprite: 2701)
+    Ghost,     // Slow, strong (sprite: 2702)
+}
+
+impl EnemyType {
+    pub fn get_stats(&self, floor: i64) -> (i64, i64) {
+        // Returns (health, strength) scaled by floor
+        let floor_multiplier = 1.0 + (floor as f32 * 0.15);  // 15% increase per floor
+        let base_stats = match self {
+            EnemyType::Skeleton => (3, 1),   // Fast but fragile
+            EnemyType::Orc => (7, 2),        // Balanced
+            EnemyType::Ghost => (10, 3),     // Strong and tanky
+        };
+        (
+            ((base_stats.0 as f32) * floor_multiplier) as i64,
+            ((base_stats.1 as f32) * floor_multiplier) as i64,
+        )
+    }
+
+    pub fn sprite_index(&self) -> usize {
+        match self {
+            EnemyType::Skeleton => 2700,
+            EnemyType::Orc => 2701,
+            EnemyType::Ghost => 2702,
+        }
+    }
+
+    pub fn random() -> Self {
+        let r: f32 = rand::random();
+        if r < 0.4 {
+            EnemyType::Skeleton
+        } else if r < 0.7 {
+            EnemyType::Orc
+        } else {
+            EnemyType::Ghost
+        }
+    }
+}
 
 #[derive(Component, Debug)]
 pub struct Enemy;
@@ -63,3 +122,22 @@ pub struct Menu;
 
 #[derive(Component)]
 pub struct HealthGain;
+
+#[derive(Component)]
+pub struct TargetIndicator;
+
+#[derive(Component)]
+pub struct TargetedEnemy;
+
+#[derive(Component)]
+pub struct Particle {
+    pub lifetime: f32,
+    pub velocity: Vec2,
+}
+
+#[derive(Component, Clone, Copy)]
+pub enum ParticleType {
+    HitSpark,
+    Death,
+    HealthPickup,
+}

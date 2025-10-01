@@ -42,6 +42,8 @@ fn main() {
                 health,
                 set_visibility,
                 track_mouse_movement,
+                update_target_indicator,
+                update_particles,
             ).run_if(in_state(GameState::Playing)),
         )
         .add_systems(OnEnter(GameState::Victory), on_victory)
