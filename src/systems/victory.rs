@@ -8,12 +8,13 @@ pub fn victory(
     map: Res<Map>,
     player_query: Query<&Position, With<Player>>,
     enemy_query: Query<Entity, (With<Enemy>, Without<Player>)>,
-    mut game_state: ResMut<State<GameState>>,
+    game_state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if *game_state.current() == GameState::Playing
+    if *game_state.get() == GameState::Playing
         && determine_victory(&map.victory_condition, &player_query, &enemy_query)
     {
-        game_state.set(GameState::Victory).unwrap();
+        next_state.set(GameState::Victory);
     }
 }
 

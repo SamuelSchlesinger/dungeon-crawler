@@ -1,3 +1,4 @@
+use bevy::prelude::Resource;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
@@ -104,7 +105,7 @@ impl Enemy {
 #[derive(Deserialize, Serialize, PartialEq, PartialOrd, Eq, Ord, Clone)]
 pub struct ItemId(u64);
 
-#[derive(Deserialize, Serialize, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Clone, Resource)]
 pub struct Map {
     pub room: Room,
     pub player_health: u64,

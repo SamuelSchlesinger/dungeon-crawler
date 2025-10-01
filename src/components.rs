@@ -1,11 +1,9 @@
 use bevy::prelude::*;
-use itertools::Itertools;
 
-pub use positioning::position::Position;
+pub use positioning::Position;
 
 use std::{
     collections::{BTreeSet, VecDeque},
-    ops::Add,
 };
 
 #[derive(Component, Debug)]
@@ -42,7 +40,7 @@ pub struct Enemy;
 pub struct Player;
 
 #[derive(Component, Debug)]
-pub struct Camera;
+pub struct CameraMarker;
 
 #[derive(Component, Debug)]
 pub struct Passable(pub bool);

@@ -4,19 +4,19 @@ use crate::components::Position;
 
 use bevy::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Follow(pub bool);
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Floor(pub i64);
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct ScaleFactor(pub f32);
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct MousePosition(pub Vec2);
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Tiles(pub BTreeMap<Position, CachedTile>);
 
 #[derive(Debug, Copy, Clone)]
@@ -45,7 +45,7 @@ pub struct CachedHealth {
     pub health: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Healths(pub BTreeMap<Position, CachedHealth>);
 
 impl Healths {
@@ -62,14 +62,14 @@ impl Healths {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Enemies {
     entity_positions: BTreeMap<Entity, Position>,
     position_entities: BTreeMap<Position, BTreeSet<Entity>>,
 }
 
-#[derive(Debug)]
-pub struct SpriteTexture(pub Handle<TextureAtlas>);
+#[derive(Debug, Resource)]
+pub struct SpriteTexture(pub (Handle<Image>, Handle<TextureAtlasLayout>));
 
 impl Enemies {
     pub fn new() -> Self {

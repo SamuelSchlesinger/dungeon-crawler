@@ -3,25 +3,26 @@ use bevy::prelude::*;
 use crate::{components::Menu, map, maps, state::GameState};
 
 pub fn menu(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut state: ResMut<State<GameState>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
     mut map: ResMut<map::Map>,
     mut query: Query<&mut Visibility, With<Menu>>,
 ) {
-    if state.current() == &GameState::Menu {
-        if keyboard_input.just_pressed(KeyCode::U) {
+    if state.get() == &GameState::Menu {
+        if keyboard_input.just_pressed(KeyCode::KeyU) {
             *map = maps::unbeatable();
-            state.set(GameState::Playing).unwrap();
-        } else if keyboard_input.just_pressed(KeyCode::V) {
+            next_state.set(GameState::Playing);
+        } else if keyboard_input.just_pressed(KeyCode::KeyV) {
             *map = maps::avoidance();
-            state.set(GameState::Playing).unwrap();
+            next_state.set(GameState::Playing);
         }
         for mut visibility in query.iter_mut() {
-            visibility.is_visible = true;
+            *visibility = Visibility::Visible;
         }
     } else {
         for mut visibility in query.iter_mut() {
-            visibility.is_visible = false;
+            *visibility = Visibility::Hidden;
         }
     }
 }

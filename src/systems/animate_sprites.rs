@@ -6,7 +6,7 @@ use crate::resources::*;
 pub fn animate_sprites(
     mut query: Query<(
         &mut Transform,
-        &mut TextureAtlasSprite,
+        &mut Sprite,
         &Position,
         &ZLevel,
         &SpriteIndex,
@@ -19,7 +19,9 @@ pub fn animate_sprites(
             (pos.y as f32 - 0.5) * scale_factor.0,
             zlevel.0,
         );
-        sprite.index = sprite_index.0;
+        if let Some(ref mut atlas) = sprite.texture_atlas {
+            atlas.index = sprite_index.0;
+        }
         sprite.custom_size = Some(Vec2::new(scale_factor.0, scale_factor.0));
     }
 }

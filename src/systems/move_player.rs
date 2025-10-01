@@ -10,26 +10,26 @@ pub fn move_player(
     scale_factor: Res<ScaleFactor>,
     tiles: Res<Tiles>,
     mut floor: ResMut<Floor>,
-    mut camera_query: Query<&mut Transform, With<Camera>>,
+    mut camera_query: Query<&mut Transform, With<CameraMarker>>,
     entities: Query<(Entity, &Position, &Passable), Without<Player>>,
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     if let Some((entity, mut position)) = query.iter_mut().next() {
         let old_position = *position;
-        if keyboard_input.just_pressed(KeyCode::A) {
+        if keyboard_input.just_pressed(KeyCode::KeyA) {
             position.x -= 1;
-        } else if keyboard_input.just_pressed(KeyCode::D) {
+        } else if keyboard_input.just_pressed(KeyCode::KeyD) {
             position.x += 1;
-        } else if keyboard_input.just_pressed(KeyCode::W) {
+        } else if keyboard_input.just_pressed(KeyCode::KeyW) {
             position.y += 1;
-        } else if keyboard_input.just_pressed(KeyCode::S) {
+        } else if keyboard_input.just_pressed(KeyCode::KeyS) {
             position.y -= 1;
-        } else if keyboard_input.just_pressed(KeyCode::E) {
+        } else if keyboard_input.just_pressed(KeyCode::KeyE) {
             position.z += 1;
             if follow.0 {
                 floor.0 += 1;
             }
-        } else if keyboard_input.just_pressed(KeyCode::Q) {
+        } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
             position.z -= 1;
             if follow.0 {
                 floor.0 -= 1;

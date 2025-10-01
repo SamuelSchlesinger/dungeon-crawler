@@ -3,10 +3,10 @@ use bevy::prelude::*;
 use crate::state::GameState;
 
 // TODO Make this work
-pub fn restart(mut state: ResMut<State<GameState>>, keyboard_input: Res<Input<KeyCode>>) {
-    if (*state.current() == GameState::Defeat || *state.current() == GameState::Victory)
-        && keyboard_input.just_pressed(KeyCode::R)
+pub fn restart(state: Res<State<GameState>>, mut next_state: ResMut<NextState<GameState>>, keyboard_input: Res<ButtonInput<KeyCode>>) {
+    if (*state.get() == GameState::Defeat || *state.get() == GameState::Victory)
+        && keyboard_input.just_pressed(KeyCode::KeyR)
     {
-        state.set(GameState::Menu).unwrap();
+        next_state.set(GameState::Menu);
     }
 }

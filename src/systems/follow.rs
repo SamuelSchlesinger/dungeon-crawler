@@ -8,7 +8,7 @@ pub fn follow(
     scale_factor: Res<ScaleFactor>,
     mut floor: ResMut<Floor>,
     mut player_query: Query<&Position, With<Player>>,
-    mut camera_query: Query<&mut Transform, With<Camera>>,
+    mut camera_query: Query<&mut Transform, With<CameraMarker>>,
 ) {
     if let Some((mut transform, position)) = if follow.0 {
         camera_query.iter_mut().next().and_then(|transform| {

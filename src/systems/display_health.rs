@@ -12,20 +12,24 @@ pub fn display_health(
     >,
     mut health_query: Query<
         (&HealthBar, &mut Visibility, &mut Sprite, &mut Transform),
-        (Without<Enemy>, Without<Player>, Without<Camera>),
+        (Without<Enemy>, Without<Player>, Without<CameraMarker>),
     >,
 ) {
     for (entity, position, health, original_health) in position_health_query.iter_mut() {
         for (health_bar, mut visibility, mut sprite, mut transform) in health_query.iter_mut() {
             if entity == health_bar.0 {
-                visibility.is_visible = position.z == floor.0;
-                let fraction_of_health = health.0 as f32 / original_health.0 as f32;
-                if fraction_of_health <= 0.5 {
-                    sprite.color = Color::rgb(1., 1., 0.);
-                } else if fraction_of_health <= 0.2 {
-                    sprite.color = Color::rgb(1.0, 0., 0.);
+                *visibility = if position.z == floor.0 {
+                    Visibility::Visible
                 } else {
-                    sprite.color = Color::rgb(0., 1., 0.);
+                    Visibility::Hidden
+                };
+                let fraction_of_health = health.0 as f32 / original_health.0 as f32;
+                if fraction_of_health <= 0.2 {
+                    sprite.color = Color::srgb(1.0, 0., 0.);
+                } else if fraction_of_health <= 0.5 {
+                    sprite.color = Color::srgb(1., 1., 0.);
+                } else {
+                    sprite.color = Color::srgb(0., 1., 0.);
                 }
                 sprite.custom_size = Some(Vec2::new(
                     scale_factor.0 as f32 / 2. * health.0 as f32 / original_health.0 as f32,

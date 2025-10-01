@@ -1,4 +1,5 @@
 mod animate_sprites;
+mod cleanup;
 mod combat;
 mod defeat;
 mod display_health;
@@ -19,6 +20,7 @@ mod victory;
 mod walk_enemies;
 
 pub use animate_sprites::animate_sprites;
+pub use cleanup::{cleanup_collected_health, cleanup_dead_enemies};
 pub use combat::combat;
 pub use defeat::defeat;
 pub use display_health::display_health;

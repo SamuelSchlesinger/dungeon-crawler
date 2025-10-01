@@ -9,12 +9,12 @@ pub fn set_visibility(
     floor: Res<Floor>,
     mut query: Query<(&mut Visibility, &Position)>,
 ) {
-    if state.current() != &GameState::Menu {
+    if state.get() != &GameState::Menu {
         for (mut visibility, position) in query.iter_mut() {
             if position.z == floor.0 {
-                visibility.is_visible = true;
+                *visibility = Visibility::Visible;
             } else {
-                visibility.is_visible = false;
+                *visibility = Visibility::Hidden;
             }
         }
     }

@@ -7,10 +7,10 @@ include = ["/assets, README.md"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.8"
+bevy = "0.17"
 serde = "1.0"
 serde_json = "1.0"
 rand = "0.8"
 itertools = "0.10"
 priority-queue = "1.2"
-positioning = { git = "https://github.com/SamuelSchlesinger/positioning", features = ["bevy", "serde"] }
+positioning = { path = "positioning", features = ["bevy", "serde"] }

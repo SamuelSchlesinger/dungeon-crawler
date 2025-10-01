@@ -2,12 +2,12 @@ use bevy::prelude::*;
 
 use crate::{components::*, state::GameState};
 
-pub fn defeat(player_query: Query<&Position, With<Player>>, mut state: ResMut<State<GameState>>) {
-    if *state.current() != GameState::Victory
-        && *state.current() != GameState::Menu
-        && *state.current() != GameState::Defeat
+pub fn defeat(player_query: Query<&Position, With<Player>>, state: Res<State<GameState>>, mut next_state: ResMut<NextState<GameState>>) {
+    if *state.get() != GameState::Victory
+        && *state.get() != GameState::Menu
+        && *state.get() != GameState::Defeat
         && player_query.iter().next().is_none()
     {
-        state.set(GameState::Defeat).unwrap();
+        next_state.set(GameState::Defeat);
     }
 }
