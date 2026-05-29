@@ -10,7 +10,7 @@ include = ["/assets, README.md"]
 bevy = "0.17"
 serde = "1.0"
 serde_json = "1.0"
-rand = "0.8"
-itertools = "0.10"
+rand = "0.9"
+itertools = "0.14"
 priority-queue = "1.2"
 positioning = { path = "positioning", features = ["bevy", "serde"] }

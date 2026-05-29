@@ -71,8 +71,7 @@ pub fn combat(
         idx
     } else {
         // Fall back to random selection
-        let i: usize = rand::random();
-        i % m
+        rand::random_range(0..m)
     };
 
     let (ref entity, _strength, enemy_position, ref mut health, enemy_transform) =

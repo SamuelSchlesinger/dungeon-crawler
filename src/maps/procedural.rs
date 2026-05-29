@@ -41,15 +41,15 @@ impl Rect {
 /// a handful of health pickups. Victory is reaching the room farthest from start.
 pub fn procedural() -> Map {
     // Carve rooms.
-    let target_rooms = 6 + (rand::random::<usize>() % 7); // 6..=12
+    let target_rooms = rand::random_range(6..=12);
     let mut rooms: Vec<Rect> = Vec::new();
     let mut attempts = 0;
     while rooms.len() < target_rooms && attempts < 500 {
         attempts += 1;
-        let w = 4 + (rand::random::<i64>().rem_euclid(7)); // 4..=10
-        let h = 4 + (rand::random::<i64>().rem_euclid(7));
-        let x = 1 + rand::random::<i64>().rem_euclid(GRID - w - 2);
-        let y = 1 + rand::random::<i64>().rem_euclid(GRID - h - 2);
+        let w = rand::random_range(4..=10);
+        let h = rand::random_range(4..=10);
+        let x = rand::random_range(1..(GRID - w - 1));
+        let y = rand::random_range(1..(GRID - h - 1));
         let candidate = Rect { x, y, w, h };
         if rooms.iter().all(|r| !r.intersects(&candidate)) {
             rooms.push(candidate);
@@ -128,10 +128,10 @@ pub fn procedural() -> Map {
     let mut total_enemy_hp: i64 = 0;
     for r in &rooms {
         // Skip the very first cells of the start room near the player.
-        let n_enemies = rand::random::<usize>() % 4; // 0..=3 per room
+        let n_enemies = rand::random_range(0..4usize); // 0..=3 per room
         for _ in 0..n_enemies {
-            let ex = r.x + rand::random::<i64>().rem_euclid(r.w);
-            let ey = r.y + rand::random::<i64>().rem_euclid(r.h);
+            let ex = r.x + rand::random_range(0..r.w);
+            let ey = r.y + rand::random_range(0..r.h);
             let pos = Position::new(ex, ey, Z);
             if pos == start || pos == victory_position {
                 continue;
@@ -152,11 +152,11 @@ pub fn procedural() -> Map {
     }
 
     // Scatter 1-3 health pickups across non-start rooms.
-    let n_pickups = 1 + (rand::random::<usize>() % 3); // 1..=3
+    let n_pickups = rand::random_range(1..=3); // 1..=3
     for _ in 0..n_pickups {
-        let r = rooms[rand::random::<usize>() % rooms.len()];
-        let hx = r.x + rand::random::<i64>().rem_euclid(r.w);
-        let hy = r.y + rand::random::<i64>().rem_euclid(r.h);
+        let r = rooms[rand::random_range(0..rooms.len())];
+        let hx = r.x + rand::random_range(0..r.w);
+        let hy = r.y + rand::random_range(0..r.h);
         let pos = Position::new(hx, hy, Z);
         if pos == start {
             continue;

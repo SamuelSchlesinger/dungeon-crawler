@@ -210,7 +210,7 @@ fn test_enemies() {
                 y: (i / 4) as i64,
                 z: (i / 4) as i64,
             },
-            Entity::from_raw(i),
+            Entity::from_raw_u32(i).unwrap(),
         );
     }
     for i in 0..30u32 {
@@ -220,7 +220,7 @@ fn test_enemies() {
                 y: (i / 4 + 1) as i64,
                 z: (i / 4 + 1) as i64,
             },
-            Entity::from_raw(i),
+            Entity::from_raw_u32(i).unwrap(),
         );
     }
 }

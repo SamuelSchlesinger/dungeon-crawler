@@ -147,7 +147,7 @@ pub const WEAPON_TABLE: &[(&str, i64)] = &[
 impl WeaponStats {
     /// Pick a random weapon from the fixed table.
     pub fn random() -> Self {
-        let (name, strength_bonus) = WEAPON_TABLE[rand::random::<usize>() % WEAPON_TABLE.len()];
+        let (name, strength_bonus) = WEAPON_TABLE[rand::random_range(0..WEAPON_TABLE.len())];
         WeaponStats {
             strength_bonus,
             name,
