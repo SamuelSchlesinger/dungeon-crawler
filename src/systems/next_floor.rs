@@ -9,6 +9,7 @@ use crate::state::GameState;
 /// Runs on entering `NextFloor`: tears down the current floor, carries the
 /// player's stats and run statistics forward, generates a fresh procedural
 /// floor, and returns to `Playing` (which re-runs `setup_play`).
+#[allow(clippy::type_complexity)]
 pub fn next_floor(
     mut commands: Commands,
     // All positioned (grid) entities plus enemy health bars. The camera has no

@@ -4,6 +4,7 @@ use crate::components::*;
 use crate::resources::*;
 use crate::systems::particle_system::spawn_particle;
 
+#[allow(clippy::too_many_arguments)]
 pub fn combat(
     mut commands: Commands,
     mut player_query: Query<
@@ -17,7 +18,6 @@ pub fn combat(
     text_query: Query<(Entity, &HealthBar)>,
     targeted_query: Query<Entity, With<TargetedEnemy>>,
     mut statistics: ResMut<Statistics>,
-    scale_factor: Res<ScaleFactor>,
     mut weapon_drops: ResMut<WeaponDrops>,
     sprite_texture: Res<SpriteTexture>,
 ) {

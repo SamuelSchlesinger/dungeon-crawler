@@ -22,6 +22,8 @@ pub fn initialize_resources(
     commands.insert_resource(Enemies::new());
     commands.insert_resource(Healths::new());
     commands.insert_resource(WeaponDrops::new());
+    commands.insert_resource(Revealed::new());
+    commands.insert_resource(VisibleTiles::new());
     commands.insert_resource(map.clone());
     create_camera(&mut commands, initial_position);
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
@@ -60,6 +62,7 @@ pub fn get_tiles_texture_handle(
     (tiles_texture_handle, atlas_layout_handle)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn setup_play(
     mut commands: Commands,
     test_map: Res<map::Map>,
@@ -72,6 +75,8 @@ pub fn setup_play(
     mut enemies: ResMut<Enemies>,
     mut healths: ResMut<Healths>,
     mut weapon_drops: ResMut<WeaponDrops>,
+    mut revealed: ResMut<Revealed>,
+    mut visible_tiles: ResMut<VisibleTiles>,
     statistics: Option<Res<Statistics>>,
     carry_over: Option<Res<CarryOver>>,
 ) {
@@ -81,6 +86,8 @@ pub fn setup_play(
     *enemies = Enemies::new();
     *healths = Healths::new();
     *weapon_drops = WeaponDrops::new();
+    *revealed = Revealed::new();
+    *visible_tiles = VisibleTiles::new();
 
     let initial_position = test_map.room.initial_position;
 

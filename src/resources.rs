@@ -89,6 +89,29 @@ pub struct Enemies {
 #[derive(Debug, Resource)]
 pub struct SpriteTexture(pub (Handle<Image>, Handle<TextureAtlasLayout>));
 
+/// Set of every tile position the player has ever seen (line-of-sight history).
+/// Used by the fog-of-war system: revealed tiles stay rendered, but enemies are
+/// only shown when currently within line of sight.
+#[derive(Debug, Resource, Default)]
+pub struct Revealed(pub BTreeSet<Position>);
+
+impl Revealed {
+    pub fn new() -> Self {
+        Revealed(BTreeSet::new())
+    }
+}
+
+/// Set of tiles currently within the player's line of sight this frame. Rebuilt
+/// every frame by the fog system and consumed by `set_visibility`.
+#[derive(Debug, Resource, Default)]
+pub struct VisibleTiles(pub BTreeSet<Position>);
+
+impl VisibleTiles {
+    pub fn new() -> Self {
+        VisibleTiles(BTreeSet::new())
+    }
+}
+
 /// Player stats carried across floors during a multi-floor roguelike run.
 /// When present, `setup_play` uses these instead of the map's defaults so the
 /// player keeps their current health and accumulated strength between floors.

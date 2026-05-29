@@ -5,6 +5,7 @@ use crate::resources::*;
 
 /// Updates the target indicator to show which enemy the player will attack
 /// based on mouse position. Highlights the closest adjacent enemy to the cursor.
+#[allow(clippy::too_many_arguments)]
 pub fn update_target_indicator(
     mut commands: Commands,
     player_query: Query<&Position, With<Player>>,

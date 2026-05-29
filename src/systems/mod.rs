@@ -3,6 +3,7 @@ mod cleanup;
 mod combat;
 mod defeat;
 mod display_health;
+mod fog;
 mod follow;
 mod health;
 mod menu;
@@ -28,6 +29,7 @@ pub use cleanup::{cleanup_collected_health, cleanup_dead_enemies, cleanup_weapon
 pub use combat::combat;
 pub use defeat::defeat;
 pub use display_health::display_health;
+pub use fog::fog_of_war;
 pub use follow::follow;
 pub use health::health;
 pub use menu::menu;
