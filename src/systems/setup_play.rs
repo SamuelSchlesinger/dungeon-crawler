@@ -21,6 +21,7 @@ pub fn initialize_resources(
     commands.insert_resource(Tiles::new());
     commands.insert_resource(Enemies::new());
     commands.insert_resource(Healths::new());
+    commands.insert_resource(WeaponDrops::new());
     commands.insert_resource(map.clone());
     create_camera(&mut commands, initial_position);
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
@@ -70,9 +71,17 @@ pub fn setup_play(
     mut tiles: ResMut<Tiles>,
     mut enemies: ResMut<Enemies>,
     mut healths: ResMut<Healths>,
+    mut weapon_drops: ResMut<WeaponDrops>,
     statistics: Option<Res<Statistics>>,
     carry_over: Option<Res<CarryOver>>,
 ) {
+    // Reset position-indexed resources so a freshly entered map never inherits
+    // stale entries from a previous floor or run.
+    *tiles = Tiles::new();
+    *enemies = Enemies::new();
+    *healths = Healths::new();
+    *weapon_drops = WeaponDrops::new();
+
     let initial_position = test_map.room.initial_position;
 
     // Run depth used for enemy scaling. For procedural floors every tile is on

@@ -16,9 +16,6 @@ pub fn next_floor(
     entities: Query<Entity, Or<(With<Position>, With<HealthBar>)>>,
     player_query: Query<(&Health, &Strength), With<Player>>,
     mut statistics: ResMut<Statistics>,
-    mut tiles: ResMut<Tiles>,
-    mut enemies: ResMut<Enemies>,
-    mut healths: ResMut<Healths>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     // Carry the player's current health/strength to the next floor. Give a small
@@ -32,14 +29,11 @@ pub fn next_floor(
     }
 
     // Despawn the current floor's tiles, enemies, pickups, health bars, etc.
+    // (The position-indexed resources are reset by setup_play on the next entry
+    // into Playing.)
     for entity in entities.iter() {
         commands.entity(entity).despawn();
     }
-
-    // Reset the position-indexed resources so the next floor starts clean.
-    *tiles = Tiles::new();
-    *enemies = Enemies::new();
-    *healths = Healths::new();
 
     // Count this floor as cleared (Statistics is carried forward, not reset).
     statistics.floors_completed += 1;

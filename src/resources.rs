@@ -62,6 +62,24 @@ impl Healths {
     }
 }
 
+/// Tracks dropped weapon pickups by grid position, mirroring `Healths`.
+#[derive(Debug, Resource)]
+pub struct WeaponDrops(pub BTreeMap<Position, Entity>);
+
+impl WeaponDrops {
+    pub fn new() -> Self {
+        WeaponDrops(BTreeMap::new())
+    }
+
+    pub fn insert(&mut self, position: Position, entity: Entity) {
+        self.0.insert(position, entity);
+    }
+
+    pub fn remove(&mut self, position: Position) -> Option<Entity> {
+        self.0.remove(&position)
+    }
+}
+
 #[derive(Debug, Resource)]
 pub struct Enemies {
     entity_positions: BTreeMap<Entity, Position>,
