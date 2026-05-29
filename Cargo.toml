@@ -15,3 +15,9 @@ itertools = "0.14"
 priority-queue = "1.2"
 positioning = { path = "positioning", features = ["bevy", "serde"] }
 bevy_egui = "0.38"
+
+# Web build: getrandom 0.3 (pulled in by rand 0.9) needs the wasm_js backend
+# to compile for wasm32-unknown-unknown. See .cargo/config.toml for the
+# companion rustflag (both are required).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
