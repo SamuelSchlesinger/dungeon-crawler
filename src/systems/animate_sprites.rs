@@ -4,13 +4,13 @@ use crate::components::*;
 use crate::resources::*;
 
 pub fn animate_sprites(
-    mut query: Query<(
-        &mut Transform,
-        &mut Sprite,
-        &Position,
-        &ZLevel,
-        &SpriteIndex,
-    )>,
+    // Real-time actors (player/enemies) drive their own `Transform` from
+    // `WorldPos`, so they are excluded here; this only grid-snaps statics
+    // (tiles, pickups, weapon drops).
+    mut query: Query<
+        (&mut Transform, &mut Sprite, &Position, &ZLevel, &SpriteIndex),
+        Without<WorldPos>,
+    >,
     scale_factor: Res<ScaleFactor>,
 ) {
     for (mut transform, mut sprite, pos, zlevel, sprite_index) in query.iter_mut() {

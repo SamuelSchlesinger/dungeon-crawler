@@ -150,6 +150,10 @@ impl Enemies {
         }
     }
 
+    /// Returns the set of enemies occupying a tile. Part of the public
+    /// occupancy API; currently unused by systems (real-time AI reads
+    /// `occupied_position` instead) but kept for callers/tests.
+    #[allow(dead_code)]
     pub fn enemies_at(&self, position: Position) -> Option<&BTreeSet<Entity>> {
         self.position_entities.get(&position)
     }

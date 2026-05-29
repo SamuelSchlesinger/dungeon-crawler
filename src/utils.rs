@@ -34,6 +34,28 @@ pub fn convert_world_coordinates_to_ui_position(
     )
 }
 
+/// Converts a continuous world-space point to the grid tile that contains it.
+///
+/// Tiles are rendered with their center at `((gx - 0.5) * scale, (gy - 0.5) * scale)`
+/// (see `setup_play` / `animate_sprites`). Inverting that and rounding maps a
+/// world point to the nearest tile center, which is what every grid system
+/// (fog, victory arrival, pathfinding targets) expects.
+pub fn world_to_grid(world: Vec2, scale_factor: f32, z: i64) -> Position {
+    Position {
+        x: (world.x / scale_factor + 0.5).round() as i64,
+        y: (world.y / scale_factor + 0.5).round() as i64,
+        z,
+    }
+}
+
+/// Center of a grid tile in world space (matches the tile rendering formula).
+pub fn grid_to_world_center(x: i64, y: i64, scale_factor: f32) -> Vec2 {
+    Vec2::new(
+        (x as f32 - 0.5) * scale_factor,
+        (y as f32 - 0.5) * scale_factor,
+    )
+}
+
 pub fn move_camera_2d(transform: &mut Transform, scale_factor: f32, by: KeyCode) {
     pub fn f(transform: &mut Transform, by: Vec3) {
         *transform = transform.with_translation(transform.translation + by);
