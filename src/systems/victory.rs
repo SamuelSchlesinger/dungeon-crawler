@@ -2,19 +2,30 @@ use bevy::prelude::*;
 
 use crate::components::*;
 use crate::map::{Map, VictoryCondition};
+use crate::resources::*;
 use crate::state::GameState;
+
+/// Maximum number of floors cleared in a single run before reaching real
+/// Victory. After clearing this many floors the run ends in a win.
+const RUN_FLOOR_CAP: i64 = 8;
 
 pub fn victory(
     map: Res<Map>,
     player_query: Query<&Position, With<Player>>,
     enemy_query: Query<Entity, (With<Enemy>, Without<Player>)>,
+    statistics: Res<Statistics>,
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if *game_state.get() == GameState::Playing
         && determine_victory(&map.victory_condition, &player_query, &enemy_query)
     {
-        next_state.set(GameState::Victory);
+        // Clearing this floor brings the cleared count to floors_completed + 1.
+        if statistics.floors_completed + 1 >= RUN_FLOOR_CAP {
+            next_state.set(GameState::Victory);
+        } else {
+            next_state.set(GameState::NextFloor);
+        }
     }
 }
 

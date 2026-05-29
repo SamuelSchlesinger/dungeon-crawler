@@ -71,8 +71,14 @@ pub fn setup_play(
     mut enemies: ResMut<Enemies>,
     mut healths: ResMut<Healths>,
     statistics: Option<Res<Statistics>>,
+    carry_over: Option<Res<CarryOver>>,
 ) {
     let initial_position = test_map.room.initial_position;
+
+    // Run depth used for enemy scaling. For procedural floors every tile is on
+    // z=0, so we scale by the number of floors cleared this run rather than the
+    // z-plane (which `Floor` tracks for visibility).
+    let run_depth = statistics.as_ref().map_or(0, |s| s.floors_completed);
 
     let (tiles_texture_image, tiles_texture_layout) = get_tiles_texture_handle(&asset_server, &mut texture_atlases);
 
@@ -135,9 +141,9 @@ pub fn setup_play(
     }
 
     for (Position { x, y, z }, enemy) in (&room.enemies).into_iter() {
-        // Randomize enemy type for variety, scale stats by floor
+        // Randomize enemy type for variety, scale stats by run depth
         let enemy_type = EnemyType::random();
-        let (health, strength) = enemy_type.get_stats(floor.0.abs());
+        let (health, strength) = enemy_type.get_stats(run_depth);
         let sprite_idx = enemy_type.sprite_index();
 
         let mut enemy_entity = commands.spawn((
@@ -262,6 +268,13 @@ pub fn setup_play(
         );
     }
 
+    // Carry the player's current health/strength forward between floors when a
+    // run is in progress; otherwise use the map's starting values.
+    let (player_health, player_strength) = match carry_over.as_ref() {
+        Some(c) => (c.health, c.strength),
+        None => (test_map.player_health as i64, test_map.player_strength as i64),
+    };
+
     let player_id = commands
         .spawn((
             Sprite::from_atlas_image(
@@ -279,9 +292,9 @@ pub fn setup_play(
             Visibility::Visible,
             room.initial_position.clone(),
             Player,
-            Health(test_map.player_health as i64),
+            Health(player_health),
             OriginalHealth(test_map.player_health as i64),
-            Strength(test_map.player_strength as i64),
+            Strength(player_strength),
             Passable(false),
             SpriteIndex(test_map.player_sprite as usize),
             ZLevel(0.02),
@@ -306,12 +319,16 @@ pub fn setup_play(
             HealthBar(player_id),
         ));
 
-    // Initialize or update statistics
-    if let Some(stats) = statistics {
-        let mut new_stats = stats.clone();
-        new_stats.floors_completed += 1;
-        commands.insert_resource(new_stats);
-    } else {
+    // Ensure a Statistics resource exists; do NOT increment floors_completed
+    // here. Floor-clear counting is owned by the NextFloor transition so it
+    // stays consistent across multi-floor runs.
+    if statistics.is_none() {
         commands.insert_resource(Statistics::new());
+    }
+
+    // CarryOver is single-use per floor transition; consume it so a fresh run
+    // started from the menu does not inherit stale stats.
+    if carry_over.is_some() {
+        commands.remove_resource::<CarryOver>();
     }
 }

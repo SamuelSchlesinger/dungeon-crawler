@@ -71,6 +71,15 @@ pub struct Enemies {
 #[derive(Debug, Resource)]
 pub struct SpriteTexture(pub (Handle<Image>, Handle<TextureAtlasLayout>));
 
+/// Player stats carried across floors during a multi-floor roguelike run.
+/// When present, `setup_play` uses these instead of the map's defaults so the
+/// player keeps their current health and accumulated strength between floors.
+#[derive(Debug, Resource, Clone, Copy)]
+pub struct CarryOver {
+    pub health: i64,
+    pub strength: i64,
+}
+
 #[derive(Debug, Resource, Clone)]
 pub struct Statistics {
     pub enemies_killed: i64,

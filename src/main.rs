@@ -46,6 +46,7 @@ fn main() {
                 update_particles,
             ).run_if(in_state(GameState::Playing)),
         )
+        .add_systems(OnEnter(GameState::NextFloor), next_floor)
         .add_systems(OnEnter(GameState::Victory), on_victory)
         .add_systems(OnEnter(GameState::Defeat), on_defeat)
         .add_systems(Update, restart)
