@@ -9,7 +9,7 @@ use crate::resources::*;
 pub fn update_target_indicator(
     mut commands: Commands,
     player_query: Query<&Position, With<Player>>,
-    enemy_query: Query<(Entity, &Position, &Transform), With<Enemy>>,
+    enemy_query: Query<(Entity, &Position, &Transform), (With<Enemy>, Without<TargetIndicator>)>,
     mouse_position: Res<MousePosition>,
     scale_factor: Res<ScaleFactor>,
     camera_query: Query<(&Camera, &GlobalTransform), With<CameraMarker>>,
