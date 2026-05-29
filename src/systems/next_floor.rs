@@ -23,6 +23,7 @@ pub fn next_floor(
             With<DamageNumber>,
             With<Particle>,
             With<TransientVisual>,
+            With<Projectile>,
         )>,
     >,
     player_query: Query<(&Health, &Strength), With<Player>>,

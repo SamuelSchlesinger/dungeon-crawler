@@ -1,5 +1,7 @@
 mod animate_sprites;
 mod attack;
+pub mod boon_select;
+pub mod boons;
 mod cleanup;
 pub mod damage_numbers;
 mod dash;
@@ -23,6 +25,7 @@ mod on_defeat;
 mod on_victory;
 pub mod particle_system;
 mod pickup_weapon;
+pub mod projectile;
 mod restart;
 mod set_follow;
 mod set_visibility;
@@ -33,7 +36,10 @@ mod victory;
 
 pub use animate_sprites::animate_sprites;
 pub use attack::player_attack;
-pub use cleanup::{cleanup_collected_health, cleanup_dead_enemies, cleanup_weapon_drops};
+pub use boon_select::{boon_select, setup_boon_select};
+pub use cleanup::{
+    cleanup_collected_health, cleanup_dead_enemies, cleanup_weapon_drops, reap_dead_enemies,
+};
 pub use damage_numbers::update_damage_numbers;
 pub use dash::dash;
 pub use defeat::defeat;
@@ -56,6 +62,7 @@ pub use on_defeat::on_defeat;
 pub use on_victory::on_victory;
 pub use particle_system::update_particles;
 pub use pickup_weapon::pickup_weapon;
+pub use projectile::move_projectiles;
 pub use restart::restart;
 pub use set_follow::set_follow;
 pub use set_visibility::set_visibility;

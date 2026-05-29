@@ -24,7 +24,9 @@ pub fn victory(
         if statistics.floors_completed + 1 >= RUN_FLOOR_CAP {
             next_state.set(GameState::Victory);
         } else {
-            next_state.set(GameState::NextFloor);
+            // Offer a boon (and the shop) BEFORE generating the next floor. The
+            // BoonSelect screen advances to NextFloor once the player picks.
+            next_state.set(GameState::BoonSelect);
         }
     }
 }
@@ -37,7 +39,16 @@ fn determine_victory(
     if let Some(position) = player.iter().next() {
         match *victory_condition {
             VictoryCondition::Extermination => enemy_query.iter().next().is_none(),
-            VictoryCondition::Arrival(winning_pos) => position == &winning_pos,
+            // Reaching the exit triggers when the player is ON or within one
+            // tile of the exit tile (same floor). Continuous movement + knockback
+            // make an exact pixel-perfect tile match unreliable, so we use a small
+            // Chebyshev radius. The exit is always far from spawn, so this never
+            // fires spuriously at the start of a floor.
+            VictoryCondition::Arrival(winning_pos) => {
+                position.z == winning_pos.z
+                    && (position.x - winning_pos.x).abs() <= 1
+                    && (position.y - winning_pos.y).abs() <= 1
+            }
             VictoryCondition::And(ref cs) => {
                 cs.iter().all(|c| determine_victory(c, player, enemy_query))
             }

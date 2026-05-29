@@ -4,19 +4,28 @@ use bevy_egui::{egui, EguiContexts};
 use crate::components::*;
 use crate::resources::*;
 
-/// Top-bar HUD drawn with egui during play: a player HP bar + number and the
-/// current floor. Runs in `EguiPrimaryContextPass` like the menu/end screens.
+/// Top-bar HUD drawn with egui during play: a player HP bar + number, the
+/// current floor, gold, the equipped weapon type, and a compact boon count.
+/// Runs in `EguiPrimaryContextPass` like the menu/end screens.
 pub fn hud(
     mut contexts: EguiContexts,
     statistics: Res<Statistics>,
-    player_query: Query<(&Health, &OriginalHealth), With<Player>>,
+    gold: Res<Gold>,
+    active_weapon: Res<ActiveWeapon>,
+    acquired: Res<AcquiredBoons>,
+    player_stats: Res<PlayerStats>,
+    player_query: Query<&Health, With<Player>>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
-    let (hp, max_hp) = match player_query.iter().next() {
-        Some((h, oh)) => (h.0.max(0), oh.0.max(1)),
-        None => (0, 1),
-    };
+    // Max HP is now driven by PlayerStats (base + boon bonuses), so the bar
+    // reflects +max-HP boons immediately.
+    let max_hp = player_stats.effective_max_hp().max(1);
+    let hp = player_query
+        .iter()
+        .next()
+        .map(|h| h.0.max(0))
+        .unwrap_or(0);
     // Floor count cleared so far (1-indexed display for readability).
     let floor_display = statistics.floors_completed + 1;
 
@@ -62,6 +71,38 @@ pub fn hud(
                         .strong()
                         .color(egui::Color32::LIGHT_GRAY),
                 );
+
+                ui.add_space(24.0);
+                ui.label(
+                    egui::RichText::new(format!("Gold {}", gold.0))
+                        .size(18.0)
+                        .strong()
+                        .color(egui::Color32::from_rgb(255, 210, 0)),
+                );
+
+                ui.add_space(24.0);
+                ui.label(
+                    egui::RichText::new(format!(
+                        "{} [{}]",
+                        active_weapon.name,
+                        active_weapon.weapon_type.label()
+                    ))
+                    .size(18.0)
+                    .strong()
+                    .color(egui::Color32::from_rgb(150, 200, 255)),
+                );
+
+                if !acquired.0.is_empty() {
+                    ui.add_space(24.0);
+                    let resp = ui.label(
+                        egui::RichText::new(format!("Boons x{}", acquired.0.len()))
+                            .size(18.0)
+                            .strong()
+                            .color(egui::Color32::from_rgb(180, 140, 255)),
+                    );
+                    // Hover to see the acquired boon list.
+                    resp.on_hover_text(acquired.0.join("\n"));
+                }
             });
         });
 
