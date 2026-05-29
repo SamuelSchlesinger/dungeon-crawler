@@ -101,8 +101,11 @@ pub struct Player;
 #[derive(Component, Debug)]
 pub struct CameraMarker;
 
+/// Per-entity passability flag. Retained on actors/pickups as a data-model hint;
+/// real-time collision now reads tile passability from the `Tiles` resource, so
+/// the flag itself is not currently queried.
 #[derive(Component, Debug)]
-pub struct Passable(pub bool);
+pub struct Passable(#[allow(dead_code)] pub bool);
 
 #[test]
 fn test_adjacency() {
@@ -113,7 +116,6 @@ fn test_adjacency() {
 
 #[derive(Component, Debug)]
 pub struct MovementPath {
-    pub age: usize,
     pub path: Option<VecDeque<Position>>,
 }
 
@@ -156,11 +158,74 @@ impl WeaponStats {
 /// tilesheet glyph (same row family as the player sprite).
 pub const WEAPON_SPRITE_INDEX: usize = 24 * 64 + 41;
 
-#[derive(Component)]
-pub struct TargetIndicator;
+// ---------------------------------------------------------------------------
+// Real-time action components (Wave 1)
+// ---------------------------------------------------------------------------
 
-#[derive(Component)]
-pub struct TargetedEnemy;
+/// Continuous world-space position (in world units). Actors that move in real
+/// time (player + enemies) carry this; their `Transform` is driven from it each
+/// frame and their grid `Position` is synced by rounding. Entities WITH this
+/// component are skipped by `animate_sprites` (which only grid-snaps statics).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct WorldPos(pub Vec2);
+
+/// Residual knockback velocity (world units/sec) that decays over time. Applied
+/// on top of intentional movement so hits visibly shove actors around.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct Knockback(pub Vec2);
+
+/// Per-actor facing direction (unit vector). Used to orient swing visuals and
+/// as a dash fallback when the player is standing still.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct Facing(pub Vec2);
+
+impl Default for Facing {
+    fn default() -> Self {
+        Facing(Vec2::new(1.0, 0.0))
+    }
+}
+
+/// Player melee attack cooldown. `Timer` finished == ready to swing.
+#[derive(Component, Debug)]
+pub struct AttackCooldown(pub Timer);
+
+/// Player dash/dodge state machine.
+#[derive(Component, Debug)]
+pub struct Dash {
+    /// Counts down while the dash burst is active.
+    pub active: Timer,
+    /// Counts down while the player is invulnerable (i-frames).
+    pub iframes: Timer,
+    /// Counts down until the player may dash again.
+    pub cooldown: Timer,
+    /// Direction of the current dash burst (unit vector).
+    pub dir: Vec2,
+    pub dashing: bool,
+}
+
+/// Transient red tint applied to an actor that just took damage. Removed when the
+/// timer finishes (which restores the sprite color).
+#[derive(Component, Debug)]
+pub struct HitFlash(pub Timer);
+
+/// Real-time enemy attack state machine: idle -> telegraph (windup) -> strike,
+/// then cooldown back to idle.
+#[derive(Component, Debug)]
+pub struct EnemyAttack {
+    pub telegraph: Timer,
+    pub cooldown: Timer,
+    pub winding_up: bool,
+}
+
+/// Periodic A* re-path timer for real-time enemy movement. When finished the
+/// enemy recomputes its grid path to the player and the timer resets.
+#[derive(Component, Debug)]
+pub struct RepathTimer(pub Timer);
+
+/// Marks a short-lived purely-visual effect (swing arc, telegraph flash). Carries
+/// its own lifetime timer and is despawned when it expires or on floor teardown.
+#[derive(Component, Debug)]
+pub struct TransientVisual(pub Timer);
 
 #[derive(Component)]
 pub struct Particle {

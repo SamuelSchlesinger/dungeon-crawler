@@ -5,6 +5,7 @@ mod maps;
 mod resources;
 mod state;
 mod systems;
+mod tuning;
 mod utils;
 
 use bevy::prelude::*;
@@ -29,36 +30,57 @@ fn main() {
                 in_state(GameState::Victory).or(in_state(GameState::Defeat)),
             ),
         )
-        .add_systems(OnEnter(GameState::Playing), setup_play)
         .add_systems(
-            FixedUpdate,
+            EguiPrimaryContextPass,
+            hud.run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(OnEnter(GameState::Playing), setup_play)
+        // Real-time action core. Everything is delta-time driven and runs each
+        // frame in Update. Explicit ordering keeps the read-after-write chains
+        // correct (input -> movement -> combat -> cleanup -> win/lose checks)
+        // and avoids B0001 query conflicts where actor sets overlap.
+        .add_systems(
+            Update,
             (
-                follow,
-                display_health,
-                animate_sprites,
-                walk_enemies,
-                combat,
-                cleanup_dead_enemies,
-                cleanup_collected_health,
-                cleanup_weapon_drops,
-                victory,
-                defeat,
-            ).run_if(in_state(GameState::Playing)),
+                // Input + intent.
+                track_mouse_movement,
+                set_follow,
+                dash.before(move_player),
+                // Player real-time movement (reads dash state, syncs grid pos).
+                move_player,
+                // Player melee + enemy AI (after the player has moved).
+                player_attack.after(move_player),
+                enemy_move.after(move_player),
+                enemy_attack.after(enemy_move),
+                // Camera follows the post-move player position.
+                follow.after(move_player),
+                move_camera,
+            )
+                .run_if(in_state(GameState::Playing)),
         )
         .add_systems(
             Update,
             (
-                move_camera,
-                move_player,
-                set_follow,
+                // Pickups / stat application.
                 health,
                 pickup_weapon,
-                fog_of_war,
-                set_visibility.after(fog_of_war),
-                track_mouse_movement,
-                update_target_indicator,
+                // Feedback + visuals.
+                hit_flash,
+                update_transient_visuals,
                 update_particles,
-            ).run_if(in_state(GameState::Playing)),
+                animate_sprites,
+                display_health.after(enemy_move),
+                // Fog of war (reads synced grid positions).
+                fog_of_war.after(move_player),
+                set_visibility.after(fog_of_war),
+                // Resource sync + win/lose, after combat may have despawned.
+                cleanup_dead_enemies.after(player_attack).after(enemy_move),
+                cleanup_collected_health.after(health),
+                cleanup_weapon_drops.after(pickup_weapon),
+                victory.after(cleanup_dead_enemies),
+                defeat.after(enemy_attack),
+            )
+                .run_if(in_state(GameState::Playing)),
         )
         .add_systems(OnEnter(GameState::NextFloor), next_floor)
         .add_systems(OnEnter(GameState::Victory), on_victory)

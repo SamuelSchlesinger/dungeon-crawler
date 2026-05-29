@@ -89,10 +89,11 @@ pub fn menu(
             );
             ui.add_space(6.0);
             for line in [
-                "WASD  \u{2014}  Move",
-                "Mouse  \u{2014}  Target enemy",
+                "WASD  \u{2014}  Move (hold to move smoothly)",
+                "Left Mouse / Space  \u{2014}  Melee swing (aim with mouse)",
+                "Left Shift / Right Mouse  \u{2014}  Dash (brief i-frames)",
                 "Q / E  \u{2014}  Change floor (down / up)",
-                "F  \u{2014}  Toggle camera follow",
+                "F  \u{2014}  Toggle camera follow (on by default)",
                 "R  \u{2014}  Restart (on Victory / Defeat screen)",
             ] {
                 ui.label(

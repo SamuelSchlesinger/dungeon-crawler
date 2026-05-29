@@ -3,8 +3,37 @@ use bevy::prelude::*;
 use crate::components::*;
 use crate::map;
 use crate::resources::*;
+use crate::tuning;
+use crate::utils::grid_to_world_center;
 
 const INITIAL_SCALE_FACTOR: f32 = 50.;
+
+/// A `Once` timer of the given duration that begins already finished, so a
+/// cooldown gated on `timer.finished()` is ready to fire immediately.
+fn finished_timer(secs: f32) -> Timer {
+    let mut t = Timer::from_seconds(secs, TimerMode::Once);
+    t.tick(std::time::Duration::from_secs_f32(secs));
+    t
+}
+
+/// Builds an atlas sprite sized to one tile. Real-time actors (player/enemies)
+/// are excluded from `animate_sprites` (which used to size sprites), so they set
+/// `custom_size` at spawn here instead.
+fn actor_sprite(
+    image: &Handle<Image>,
+    layout: &Handle<TextureAtlasLayout>,
+    index: usize,
+) -> Sprite {
+    let mut sprite = Sprite::from_atlas_image(
+        image.clone(),
+        TextureAtlas {
+            layout: layout.clone(),
+            index,
+        },
+    );
+    sprite.custom_size = Some(Vec2::splat(INITIAL_SCALE_FACTOR));
+    sprite
+}
 
 pub fn initialize_resources(
     mut commands: &mut Commands,
@@ -16,7 +45,8 @@ pub fn initialize_resources(
     commands.insert_resource(ScaleFactor(INITIAL_SCALE_FACTOR));
     commands.insert_resource(MousePosition(Vec2::new(0., 0.)));
     commands.insert_resource(ClearColor(Color::srgb(0., 0., 0.)));
-    commands.insert_resource(Follow(false));
+    // Camera follows the player by default in the action build (F toggles off).
+    commands.insert_resource(Follow(true));
     commands.insert_resource(Floor(initial_position.z));
     commands.insert_resource(Tiles::new());
     commands.insert_resource(Enemies::new());
@@ -163,13 +193,7 @@ pub fn setup_play(
         let sprite_idx = enemy_type.sprite_index();
 
         let mut enemy_entity = commands.spawn((
-            Sprite::from_atlas_image(
-                tiles_texture_image.clone(),
-                TextureAtlas {
-                    layout: tiles_texture_layout.clone(),
-                    index: sprite_idx,
-                },
-            ),
+            actor_sprite(&tiles_texture_image, &tiles_texture_layout, sprite_idx),
             Transform::from_xyz(
                 (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
                 (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
@@ -194,16 +218,27 @@ pub fn setup_play(
             Enemy,
         ));
 
-        // Add remaining components
+        // Add remaining components, including the real-time action components
+        // (continuous position, knockback, and the attack state machine).
         enemy_entity.insert((
             enemy_type,
             AIBehavior::for_enemy_type(enemy_type),
-            MovementPath {
-                age: 20,
-                path: None,
-            },
+            MovementPath { path: None },
             SpriteIndex(sprite_idx),
             ZLevel(0.01),
+            WorldPos(grid_to_world_center(*x, *y, INITIAL_SCALE_FACTOR)),
+            Facing::default(),
+            Knockback::default(),
+            EnemyAttack {
+                telegraph: Timer::from_seconds(tuning::ENEMY_TELEGRAPH, TimerMode::Once),
+                cooldown: Timer::from_seconds(tuning::ENEMY_ATTACK_COOLDOWN, TimerMode::Once),
+                winding_up: false,
+            },
+            // Stagger initial re-path so a whole pack doesn't path in lockstep.
+            RepathTimer(Timer::from_seconds(
+                tuning::ENEMY_REPATH_INTERVAL * rand::random::<f32>(),
+                TimerMode::Once,
+            )),
         ));
 
         let enemy_id = enemy_entity.id();
@@ -263,10 +298,7 @@ pub fn setup_play(
                 Passable(true),
                 Health(health.health as i64),
                 HealthGain,
-                MovementPath {
-                    age: 20,
-                    path: None,
-                },
+                MovementPath { path: None },
                 SpriteIndex(health.sprite_index as usize),
                 ZLevel(0.005),
             ))
@@ -291,31 +323,49 @@ pub fn setup_play(
         None => (test_map.player_health as i64, test_map.player_strength as i64),
     };
 
-    let player_id = commands
-        .spawn((
-            Sprite::from_atlas_image(
-                tiles_texture_image.clone(),
-                TextureAtlas {
-                    layout: tiles_texture_layout.clone(),
-                    index: test_map.player_sprite as usize,
-                },
-            ),
-            Transform::from_xyz(
-                (room.initial_position.x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                (room.initial_position.y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                0.02,
-            ),
-            Visibility::Visible,
-            room.initial_position.clone(),
-            Player,
-            Health(player_health),
-            OriginalHealth(test_map.player_health as i64),
-            Strength(player_strength),
-            Passable(false),
-            SpriteIndex(test_map.player_sprite as usize),
-            ZLevel(0.02),
-        ))
-        .id();
+    let mut player_entity = commands.spawn((
+        actor_sprite(
+            &tiles_texture_image,
+            &tiles_texture_layout,
+            test_map.player_sprite as usize,
+        ),
+        Transform::from_xyz(
+            (room.initial_position.x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+            (room.initial_position.y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+            0.02,
+        ),
+        Visibility::Visible,
+        room.initial_position.clone(),
+        Player,
+        Health(player_health),
+        OriginalHealth(test_map.player_health as i64),
+        Strength(player_strength),
+        Passable(false),
+        SpriteIndex(test_map.player_sprite as usize),
+        ZLevel(0.02),
+    ));
+    // Real-time action components for the player (split into a second insert to
+    // stay under Bevy's per-tuple component limit).
+    player_entity.insert((
+        WorldPos(grid_to_world_center(
+            room.initial_position.x,
+            room.initial_position.y,
+            INITIAL_SCALE_FACTOR,
+        )),
+        Facing::default(),
+        Knockback::default(),
+        AttackCooldown(finished_timer(tuning::ATTACK_COOLDOWN)),
+        Dash {
+            // Start with the burst/i-frame timers already finished so the player
+            // is NOT spuriously invulnerable on spawn, and may dash immediately.
+            active: finished_timer(tuning::DASH_DURATION),
+            iframes: finished_timer(tuning::DASH_IFRAMES),
+            cooldown: finished_timer(tuning::DASH_COOLDOWN),
+            dir: Vec2::ZERO,
+            dashing: false,
+        },
+    ));
+    let player_id = player_entity.id();
 
     commands
         .spawn((
