@@ -48,5 +48,6 @@ fn main() {
         )
         .add_systems(OnEnter(GameState::Victory), on_victory)
         .add_systems(OnEnter(GameState::Defeat), on_defeat)
+        .add_systems(Update, restart)
         .run();
 }

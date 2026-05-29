@@ -40,7 +40,7 @@ pub fn walk_enemies(
 
                 // attack!
                 if position.is_adjacent_to(*player_position) && !should_retreat {
-                    return;
+                    continue;
                 }
                 // random motion
                 if rand::random() && rand::random() && rand::random() {
@@ -71,7 +71,7 @@ pub fn walk_enemies(
                         *position = potential_positions
                             [rand::random::<usize>() % potential_positions.len()];
                         enemies.insert(*position, entity);
-                        return;
+                        continue;
                     }
                 }
                 if movement_path.age >= 5
