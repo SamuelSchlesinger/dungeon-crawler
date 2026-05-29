@@ -118,9 +118,6 @@ pub struct MovementPath {
 }
 
 #[derive(Component)]
-pub struct Menu;
-
-#[derive(Component)]
 pub struct HealthGain;
 
 /// Marker for a dropped weapon pickup lying on the floor.

@@ -14,3 +14,4 @@ rand = "0.9"
 itertools = "0.14"
 priority-queue = "1.2"
 positioning = { path = "positioning", features = ["bevy", "serde"] }
+bevy_egui = "0.38"

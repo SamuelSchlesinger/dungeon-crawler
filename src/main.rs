@@ -8,16 +8,27 @@ mod systems;
 mod utils;
 
 use bevy::prelude::*;
+use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use state::GameState;
 use systems::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(EguiPlugin::default())
         .init_state::<GameState>()
         .insert_resource(Time::<Fixed>::from_hz(30.0))
         .add_systems(Startup, setup)
-        .add_systems(Update, menu.run_if(in_state(GameState::Menu)))
+        .add_systems(
+            EguiPrimaryContextPass,
+            menu.run_if(in_state(GameState::Menu)),
+        )
+        .add_systems(
+            EguiPrimaryContextPass,
+            end_screen.run_if(
+                in_state(GameState::Victory).or(in_state(GameState::Defeat)),
+            ),
+        )
         .add_systems(OnEnter(GameState::Playing), setup_play)
         .add_systems(
             FixedUpdate,
