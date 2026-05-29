@@ -374,3 +374,109 @@ pub const RANGED_COOLDOWN: f32 = 0.45;
 
 /// Knockback applied by the AoE burst, in tiles/sec.
 pub const AOE_KNOCKBACK_TILES: f32 = 12.0;
+
+// ----------------------------------------------------------------------------
+// Wave 5 -- Juice: screen shake
+// ----------------------------------------------------------------------------
+//
+// Trauma is a 0..1 value that DECAYS over time; the actual camera offset is
+// `trauma^2 * SHAKE_MAX_OFFSET * noise`, so the shake ramps in/out smoothly and
+// stays subtle for small events. Keep these conservative -- juice, not nausea.
+
+/// Maximum camera offset (world units) at full trauma (trauma == 1.0). The
+/// squared-trauma curve means most hits feel much smaller than this cap.
+pub const SHAKE_MAX_OFFSET: f32 = 26.0;
+/// How fast trauma decays back to zero, per second (linear). Higher == snappier.
+pub const SHAKE_DECAY_PER_SEC: f32 = 1.8;
+/// How fast the shake noise oscillates (higher == jitterier / more frantic).
+pub const SHAKE_FREQUENCY: f32 = 34.0;
+
+/// Trauma added when the PLAYER takes a hit (small -- a nudge, not a jolt).
+pub const SHAKE_TRAUMA_PLAYER_HIT: f32 = 0.22;
+/// Trauma added on a big melee/projectile hit or a normal enemy kill (small).
+pub const SHAKE_TRAUMA_KILL: f32 = 0.18;
+/// Trauma added on an explosion (medium).
+pub const SHAKE_TRAUMA_EXPLOSION: f32 = 0.40;
+/// Trauma added on a boss attack / boss charge (medium).
+pub const SHAKE_TRAUMA_BOSS_ATTACK: f32 = 0.35;
+/// Trauma added on the boss's death (large -- the run's punctuation).
+pub const SHAKE_TRAUMA_BOSS_DEATH: f32 = 0.85;
+
+// ----------------------------------------------------------------------------
+// Wave 5 -- Juice: hit-stop / freeze-frames
+// ----------------------------------------------------------------------------
+//
+// On an impactful hit we briefly slow `Time::<Virtual>` so gameplay "punches".
+// The egui UI runs on real time, so menus/boon screens stay responsive. Keep
+// these VERY short so the game never feels sluggish.
+
+/// Relative game speed applied during a hit-stop (0.0 == frozen, 1.0 == normal).
+pub const HITSTOP_SLOW_FACTOR: f32 = 0.05;
+/// Hit-stop duration (seconds, real time) for a normal kill / big hit.
+pub const HITSTOP_KILL: f32 = 0.05;
+/// Hit-stop duration (seconds, real time) for an explosion.
+pub const HITSTOP_EXPLOSION: f32 = 0.06;
+/// Hit-stop duration (seconds, real time) for the boss death (the big one).
+pub const HITSTOP_BOSS_DEATH: f32 = 0.12;
+
+// ----------------------------------------------------------------------------
+// Wave 5 -- Juice: screen flash / vignette
+// ----------------------------------------------------------------------------
+//
+// A fullscreen egui overlay tinted briefly on screen-level events. Alpha decays
+// over the flash duration. Player-hurt is a red edge vignette; explosions a
+// white full-screen flash; floor transitions a dark fade ("descending").
+
+/// Peak alpha (0..1) of the red player-hurt vignette flash.
+pub const FLASH_PLAYER_HURT_ALPHA: f32 = 0.45;
+/// Duration (seconds) of the player-hurt vignette flash.
+pub const FLASH_PLAYER_HURT_DURATION: f32 = 0.35;
+/// Peak alpha (0..1) of the white explosion / boss-burst flash.
+pub const FLASH_EXPLOSION_ALPHA: f32 = 0.35;
+/// Duration (seconds) of the white explosion flash.
+pub const FLASH_EXPLOSION_DURATION: f32 = 0.22;
+/// Peak alpha (0..1) of the dark floor-transition fade.
+pub const FLASH_FLOOR_FADE_ALPHA: f32 = 0.9;
+/// Duration (seconds) of the dark floor-transition fade-in on a new floor.
+pub const FLASH_FLOOR_FADE_DURATION: f32 = 0.6;
+
+// ----------------------------------------------------------------------------
+// Wave 5 -- Juice: particles
+// ----------------------------------------------------------------------------
+//
+// Particle counts + lifetimes for the extended effects. Reuses the existing
+// `Particle` component + `update_particles` fade/despawn (no leaks).
+
+/// Particles in a melee/projectile hit-spark burst.
+pub const PARTICLE_HITSPARK_COUNT: usize = 6;
+/// Particles in a normal enemy death burst.
+pub const PARTICLE_DEATH_COUNT: usize = 14;
+/// Particles in the large boss-death burst.
+pub const PARTICLE_BOSS_DEATH_COUNT: usize = 48;
+/// Particles in a pickup sparkle (gold / health / weapon).
+pub const PARTICLE_PICKUP_COUNT: usize = 8;
+/// Particles emitted per dash-trail puff (one puff spawned per dash frame).
+pub const PARTICLE_DASH_TRAIL_COUNT: usize = 2;
+/// Lifetime (seconds) of a dash-trail afterimage puff.
+pub const PARTICLE_DASH_TRAIL_LIFETIME: f32 = 0.28;
+
+// ----------------------------------------------------------------------------
+// Wave 5 -- Audio (procedural SFX): per-effect master volume (0..1)
+// ----------------------------------------------------------------------------
+//
+// Synthesized in code (no asset files) so the web build needs no extra files.
+// One overall gain + per-event volumes so the mix is tunable. Music is omitted.
+
+/// Master SFX gain multiplier applied on top of every per-event volume.
+pub const SFX_MASTER_VOLUME: f32 = 0.5;
+/// Per-event SFX volumes (0..1), multiplied by `SFX_MASTER_VOLUME` at play time.
+pub const SFX_VOL_MELEE: f32 = 0.5;
+pub const SFX_VOL_HIT: f32 = 0.6;
+pub const SFX_VOL_ENEMY_DEATH: f32 = 0.7;
+pub const SFX_VOL_PLAYER_HURT: f32 = 0.85;
+pub const SFX_VOL_DASH: f32 = 0.5;
+pub const SFX_VOL_PICKUP: f32 = 0.6;
+pub const SFX_VOL_BOON: f32 = 0.8;
+pub const SFX_VOL_EXPLOSION: f32 = 0.9;
+pub const SFX_VOL_BOSS_ATTACK: f32 = 0.8;
+pub const SFX_VOL_FLOOR_CLEAR: f32 = 0.8;

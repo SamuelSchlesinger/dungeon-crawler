@@ -461,6 +461,10 @@ pub struct DamageNumber {
 pub struct Particle {
     pub lifetime: f32,
     pub velocity: Vec2,
+    /// The lifetime the particle was spawned with, so the fade-out alpha is
+    /// computed relative to its own duration (long-lived puffs fade smoothly
+    /// instead of snapping). Wave 5.
+    pub initial_lifetime: f32,
 }
 
 #[derive(Component, Clone, Copy)]
@@ -468,4 +472,12 @@ pub enum ParticleType {
     HitSpark,
     Death,
     HealthPickup,
+    /// Wave 5: gold-colored sparkle on a gold/coin pickup.
+    GoldPickup,
+    /// Wave 5: blue sparkle on a weapon pickup.
+    WeaponPickup,
+    /// Wave 5: faint afterimage puff left behind the player while dashing.
+    DashTrail,
+    /// Wave 5: a large, bright burst for a boss death.
+    BossDeath,
 }
