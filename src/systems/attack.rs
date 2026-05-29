@@ -41,7 +41,7 @@ pub fn player_attack(
         (With<Player>, Without<Enemy>),
     >,
     mut enemy_query: Query<
-        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position),
+        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position, &EnemyType),
         (With<Enemy>, Without<Player>),
     >,
     health_bars: Query<(Entity, &HealthBar)>,
@@ -141,7 +141,7 @@ fn melee_swing(
     player_health: &mut Health,
     rewards: &mut KillRewards,
     enemy_query: &mut Query<
-        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position),
+        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position, &EnemyType),
         (With<Enemy>, Without<Player>),
     >,
     health_bars: &Query<(Entity, &HealthBar)>,
@@ -150,7 +150,9 @@ fn melee_swing(
     let range = stats.effective_attack_range() * scale;
     let cos_half = stats.effective_attack_half_angle().cos();
 
-    for (entity, enemy_world, mut health, mut knockback, grid_pos) in enemy_query.iter_mut() {
+    for (entity, enemy_world, mut health, mut knockback, grid_pos, enemy_type) in
+        enemy_query.iter_mut()
+    {
         let to_enemy = enemy_world.0 - player_pos;
         let dist = to_enemy.length();
         if dist > range {
@@ -198,6 +200,8 @@ fn melee_swing(
                 &rewards.sprite_texture,
                 health_bars,
                 floor,
+                *enemy_type,
+                scale,
             );
         }
     }
@@ -252,6 +256,7 @@ fn fire_projectiles(
                 damage: dmg,
                 knockback: knockback_impulse,
                 crit,
+                faction: ProjectileFaction::Player,
             },
         ));
     }
@@ -267,7 +272,7 @@ fn aoe_burst(
     player_health: &mut Health,
     rewards: &mut KillRewards,
     enemy_query: &mut Query<
-        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position),
+        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position, &EnemyType),
         (With<Enemy>, Without<Player>),
     >,
     health_bars: &Query<(Entity, &HealthBar)>,
@@ -276,7 +281,9 @@ fn aoe_burst(
     let radius = tuning::AOE_RADIUS_TILES * scale;
     let knockback_impulse = tuning::AOE_KNOCKBACK_TILES * scale * stats.knockback_mult;
 
-    for (entity, enemy_world, mut health, mut knockback, grid_pos) in enemy_query.iter_mut() {
+    for (entity, enemy_world, mut health, mut knockback, grid_pos, enemy_type) in
+        enemy_query.iter_mut()
+    {
         let to_enemy = enemy_world.0 - player_pos;
         if to_enemy.length() > radius {
             continue;
@@ -320,6 +327,8 @@ fn aoe_burst(
                 &rewards.sprite_texture,
                 health_bars,
                 floor,
+                *enemy_type,
+                scale,
             );
         }
     }

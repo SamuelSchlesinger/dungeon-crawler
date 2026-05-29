@@ -10,6 +10,7 @@ mod display_health;
 mod end_screen;
 mod enemy_ai;
 mod enemy_attack;
+mod enemy_special;
 mod feedback;
 mod fog;
 mod follow;
@@ -47,6 +48,9 @@ pub use display_health::display_health;
 pub use end_screen::end_screen;
 pub use enemy_ai::enemy_move;
 pub use enemy_attack::enemy_attack;
+pub use enemy_special::{
+    archer_shoot, bomber_ai, boss_ai, charger_ai, hazard_tick, resolve_explosions,
+};
 pub use feedback::{hit_flash, update_transient_visuals};
 pub use fog::fog_of_war;
 pub use follow::follow;

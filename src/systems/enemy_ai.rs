@@ -43,6 +43,8 @@ pub fn enemy_move(
             &EnemyType,
             &Health,
             &OriginalHealth,
+            Option<&ChargeState>,
+            Option<&BossAttacks>,
         ),
         (With<Enemy>, Without<Player>),
     >,
@@ -70,6 +72,8 @@ pub fn enemy_move(
         enemy_type,
         health,
         original_health,
+        charge_state,
+        boss_attacks,
     ) in enemy_query.iter_mut()
     {
         // Always apply (and decay) knockback so even idle enemies get shoved.
@@ -85,16 +89,45 @@ pub fn enemy_move(
             continue;
         }
 
+        // Wave 4: the charger and boss drive their OWN position while their charge
+        // state machine is active (windup / dash / recover). Suppress the default
+        // chase steering for those phases so the two systems never fight over
+        // WorldPos (they still get knockback applied below, but no chase delta).
+        let self_driven = match ai_behavior {
+            AIBehavior::Charging => charge_state
+                .map(|c| c.phase != ChargePhase::Walking)
+                .unwrap_or(false),
+            AIBehavior::BossPattern => boss_attacks
+                .map(|b| b.charge.phase != ChargePhase::Walking)
+                .unwrap_or(false),
+            _ => false,
+        };
+        if self_driven {
+            // Only apply knockback; the special AI moves the actor.
+            apply_move(&mut world_pos, knock * dt, &tiles, scale, position.z);
+            sync(&mut position, &mut transform, &world_pos, &mut enemies_res, entity, scale);
+            continue;
+        }
+
         let health_fraction = health.0 as f32 / original_health.0 as f32;
         let dist_tiles = (player_world.0 - world_pos.0).length() / scale;
 
-        // Behavior: defensive enemies retreat at low HP / keep distance when close.
-        let should_retreat = matches!(ai_behavior, AIBehavior::Defensive)
-            && (health_fraction < 0.3 || dist_tiles < 2.5);
+        // Behavior: defensive enemies retreat at low HP / keep distance when close;
+        // archers (Kiting) keep their preferred range, retreating when too close.
+        let should_retreat = (matches!(ai_behavior, AIBehavior::Defensive)
+            && (health_fraction < 0.3 || dist_tiles < 2.5))
+            || (matches!(ai_behavior, AIBehavior::Kiting)
+                && dist_tiles < tuning::ARCHER_RETREAT_RANGE);
         let should_chase = match ai_behavior {
             AIBehavior::Aggressive => true,
             AIBehavior::Defensive => !should_retreat,
             AIBehavior::Patrol => dist_tiles < 6.0,
+            // Archer: only close the gap if it's farther than its preferred range.
+            AIBehavior::Kiting => !should_retreat && dist_tiles > tuning::ARCHER_PREFERRED_RANGE,
+            // Bomber: always rush. Charger (Walking) + Boss (slow): chase.
+            AIBehavior::Exploding => true,
+            AIBehavior::Charging => true,
+            AIBehavior::BossPattern => true,
         };
 
         let speed = tuning::enemy_speed_tiles(*enemy_type) * scale;
