@@ -22,6 +22,8 @@ pub fn reap_dead_enemies(
     mut commands: Commands,
     mut statistics: ResMut<Statistics>,
     mut gold: ResMut<Gold>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     floor: Res<Floor>,
     scale_factor: Res<ScaleFactor>,
     enemy_query: Query<(Entity, &WorldPos, &Health, &EnemyType), With<Enemy>>,
@@ -62,9 +64,19 @@ pub fn reap_dead_enemies(
             ));
         }
 
+        // Kill juice/audio (boss gets the big treatment) + a boss-sized burst.
+        crate::systems::projectile::kill_juice(&mut juice, &mut sfx, *enemy_type);
+        let death_particle = if *enemy_type == EnemyType::Bomber {
+            // The bomber's own explosion already provides the big burst/flash.
+            ParticleType::Death
+        } else if *enemy_type == EnemyType::Boss {
+            ParticleType::BossDeath
+        } else {
+            ParticleType::Death
+        };
         spawn_particle(
             &mut commands,
-            ParticleType::Death,
+            death_particle,
             Vec3::new(world.0.x, world.0.y, 0.06),
         );
         commands.entity(entity).despawn();

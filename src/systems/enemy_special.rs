@@ -178,6 +178,8 @@ pub fn charger_ai(
     tiles: Res<Tiles>,
     scale_factor: Res<ScaleFactor>,
     mut statistics: ResMut<Statistics>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     mut chargers: Query<
         (
             &mut WorldPos,
@@ -281,6 +283,10 @@ pub fn charger_ai(
                         ParticleType::HitSpark,
                         Vec3::new(player_world.0.x, player_world.0.y, 0.06),
                     );
+                    // A charger slam is a big hit: extra trauma on top of the
+                    // shared player-hurt juice.
+                    crate::systems::projectile::player_hurt_juice(&mut juice, &mut sfx);
+                    juice.add_trauma(tuning::SHAKE_TRAUMA_KILL);
                     if player_health.0 <= 0 {
                         spawn_particle(
                             &mut commands,
@@ -398,6 +404,21 @@ pub fn bomber_ai(
     }
 }
 
+/// Wave 5 -- shared explosion juice/audio: medium screen shake, a short
+/// hit-stop, a white full-screen flash, and the explosion SFX. Called wherever
+/// an explosion is created (bomber detonation by fuse or by being killed).
+fn explosion_juice(juice: &mut Juice, sfx: &mut MessageWriter<SfxEvent>) {
+    juice.add_trauma(tuning::SHAKE_TRAUMA_EXPLOSION);
+    juice.hitstop(tuning::HITSTOP_EXPLOSION);
+    juice.flash(
+        bevy::color::Srgba::new(1.0, 1.0, 1.0, 1.0),
+        tuning::FLASH_EXPLOSION_ALPHA,
+        tuning::FLASH_EXPLOSION_DURATION,
+        false,
+    );
+    sfx.write(SfxEvent::Explosion);
+}
+
 /// Brief expanding orange ring visual for an explosion.
 fn spawn_explosion_visual(commands: &mut Commands, center: Vec2, radius: f32) {
     commands.spawn((
@@ -429,6 +450,8 @@ fn spawn_explosion_visual(commands: &mut Commands, center: Vec2, radius: f32) {
 pub fn resolve_explosions(
     mut commands: Commands,
     mut statistics: ResMut<Statistics>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     explosions: Query<(Entity, &Explosion)>,
     mut enemy_query: Query<
         (Entity, &WorldPos, &mut Health, &mut Knockback),
@@ -440,6 +463,10 @@ pub fn resolve_explosions(
     >,
 ) {
     for (expl_entity, expl) in explosions.iter() {
+        // One explosion cue per blast (every explosion resolves here exactly
+        // once), regardless of how the bomber detonated.
+        explosion_juice(&mut juice, &mut sfx);
+
         // Player.
         if let Some((player_entity, player_world, mut player_health, mut player_kb, dash)) =
             player_query.iter_mut().next()
@@ -520,6 +547,8 @@ pub fn boss_ai(
     scale_factor: Res<ScaleFactor>,
     sprite_texture: Res<SpriteTexture>,
     statistics: Res<Statistics>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     mut boss_query: Query<
         (
             &mut WorldPos,
@@ -593,12 +622,18 @@ pub fn boss_ai(
         atk.charge_cd = Timer::from_seconds(tuning::BOSS_CHARGE_COOLDOWN, TimerMode::Once);
         atk.charge.phase = ChargePhase::WindingUp;
         atk.charge.timer = Timer::from_seconds(tuning::BOSS_CHARGE_WINDUP, TimerMode::Once);
+        // Telegraph the charge: a menacing growl + a touch of shake.
+        juice.add_trauma(tuning::SHAKE_TRAUMA_BOSS_ATTACK);
+        sfx.write(SfxEvent::BossAttack);
         return;
     }
 
     // --- Radial projectile burst ---
     if atk.burst.is_finished() {
         atk.burst = Timer::from_seconds(tuning::BOSS_BURST_COOLDOWN, TimerMode::Once);
+        // The burst lands with shake + the boss-attack cue.
+        juice.add_trauma(tuning::SHAKE_TRAUMA_BOSS_ATTACK);
+        sfx.write(SfxEvent::BossAttack);
         let n = tuning::BOSS_BURST_COUNT;
         // Aim the spray roughly toward the player but fan out a full ring.
         let base = (player_world.0 - boss_world.0).y.atan2(
@@ -733,12 +768,14 @@ fn spawn_add(
 /// but no actor markers), enemies (`With<Enemy>, Without<Player>`), player
 /// (`With<Player>, Without<Enemy>`). The hazard query and actor queries never
 /// alias the same entity.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn hazard_tick(
     mut commands: Commands,
     time: Res<Time>,
     floor: Res<Floor>,
     mut statistics: ResMut<Statistics>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     mut hazards: Query<(&Position, &mut Hazard), (Without<Enemy>, Without<Player>)>,
     mut enemy_query: Query<
         (&Position, &WorldPos, &mut Health),
@@ -775,6 +812,7 @@ pub fn hazard_tick(
                 commands.entity(player_entity).insert(HitFlash(
                     Timer::from_seconds(tuning::HIT_FLASH_DURATION, TimerMode::Once),
                 ));
+                crate::systems::projectile::player_hurt_juice(&mut juice, &mut sfx);
                 if player_health.0 <= 0 {
                     spawn_particle(
                         &mut commands,

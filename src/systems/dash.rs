@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::*;
-use crate::resources::PlayerStats;
+use crate::resources::{PlayerStats, SfxEvent};
 use crate::tuning;
 
 /// Dash / dodge.
@@ -16,6 +16,7 @@ pub fn dash(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_button: Res<ButtonInput<MouseButton>>,
     player_stats: Res<PlayerStats>,
+    mut sfx: MessageWriter<SfxEvent>,
     mut query: Query<(&mut Dash, &Facing), With<Player>>,
 ) {
     let Some((mut dash, facing)) = query.iter_mut().next() else {
@@ -52,6 +53,7 @@ pub fn dash(
         // Dash cooldown is the EFFECTIVE cooldown (base x boon reduction).
         dash.cooldown =
             Timer::from_seconds(player_stats.effective_dash_cooldown(), TimerMode::Once);
+        sfx.write(SfxEvent::Dash);
     }
 }
 

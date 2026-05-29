@@ -23,6 +23,8 @@ pub fn enemy_attack(
     time: Res<Time>,
     scale_factor: Res<ScaleFactor>,
     mut statistics: ResMut<Statistics>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     player_stats: Res<PlayerStats>,
     mut enemy_query: Query<
         (
@@ -97,6 +99,7 @@ pub fn enemy_attack(
                         ParticleType::HitSpark,
                         Vec3::new(player_world.0.x, player_world.0.y, 0.06),
                     );
+                    crate::systems::projectile::player_hurt_juice(&mut juice, &mut sfx);
 
                     // Thorns: reflect a fraction of the hit back at the attacker.
                     // (Death/gold bookkeeping is left to the cleanup + a separate

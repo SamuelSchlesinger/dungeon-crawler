@@ -7,6 +7,44 @@ use crate::systems::particle_system::spawn_particle;
 use crate::tuning;
 use crate::utils::world_to_grid;
 
+/// Wave 5 -- shared "an enemy just died" juice/audio: screen-shake trauma, a
+/// short hit-stop, and a death SFX, scaled up for a boss. Called at every kill
+/// site so kills feel identical regardless of which weapon/effect landed the
+/// blow. Kept separate from `on_enemy_killed` (which needs the loot resources)
+/// so callers can emit juice without threading writers through that function.
+pub fn kill_juice(juice: &mut Juice, sfx: &mut MessageWriter<SfxEvent>, enemy_type: EnemyType) {
+    if enemy_type == EnemyType::Boss {
+        juice.add_trauma(tuning::SHAKE_TRAUMA_BOSS_DEATH);
+        juice.hitstop(tuning::HITSTOP_BOSS_DEATH);
+        juice.flash(
+            bevy::color::Srgba::new(1.0, 1.0, 1.0, 1.0),
+            tuning::FLASH_EXPLOSION_ALPHA,
+            tuning::FLASH_EXPLOSION_DURATION,
+            false,
+        );
+        sfx.write(SfxEvent::Explosion);
+    } else {
+        juice.add_trauma(tuning::SHAKE_TRAUMA_KILL);
+        juice.hitstop(tuning::HITSTOP_KILL);
+    }
+    sfx.write(SfxEvent::EnemyDeath);
+}
+
+/// Wave 5 -- shared "the player just took a hit" juice/audio: a small screen
+/// shake, a red edge-vignette screen flash, and the player-hurt SFX. Called at
+/// every player-damage site (enemy melee, charger slam, explosion, hazard,
+/// enemy projectile) so getting hit always reads the same.
+pub fn player_hurt_juice(juice: &mut Juice, sfx: &mut MessageWriter<SfxEvent>) {
+    juice.add_trauma(tuning::SHAKE_TRAUMA_PLAYER_HIT);
+    juice.flash(
+        bevy::color::Srgba::new(1.0, 0.1, 0.1, 1.0),
+        tuning::FLASH_PLAYER_HURT_ALPHA,
+        tuning::FLASH_PLAYER_HURT_DURATION,
+        true,
+    );
+    sfx.write(SfxEvent::PlayerHurt);
+}
+
 /// Bundles the reward/loot resources mutated whenever an enemy dies, so the
 /// melee/ranged/AoE attack systems stay under Bevy's 16 system-param limit.
 #[derive(SystemParam)]
@@ -46,6 +84,8 @@ pub fn move_projectiles(
     mut statistics: ResMut<Statistics>,
     mut gold: ResMut<Gold>,
     mut weapon_drops: ResMut<WeaponDrops>,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     sprite_texture: Res<SpriteTexture>,
     mut projectiles: Query<(Entity, &mut Transform, &mut Projectile)>,
     mut enemy_query: Query<
@@ -152,8 +192,10 @@ pub fn move_projectiles(
                             ParticleType::HitSpark,
                             Vec3::new(enemy_world.0.x, enemy_world.0.y, 0.06),
                         );
+                        sfx.write(SfxEvent::Hit);
 
                         if health.0 <= 0 {
+                            kill_juice(&mut juice, &mut sfx, *enemy_type);
                             on_enemy_killed(
                                 &mut commands,
                                 entity,
@@ -215,6 +257,7 @@ pub fn move_projectiles(
                     ParticleType::HitSpark,
                     Vec3::new(player_world.0.x, player_world.0.y, 0.06),
                 );
+                player_hurt_juice(&mut juice, &mut sfx);
 
                 if player_health.0 <= 0 {
                     spawn_particle(
@@ -283,18 +326,22 @@ pub fn on_enemy_killed(
         ));
     }
 
-    spawn_particle(
-        commands,
-        ParticleType::Death,
-        Vec3::new(world.x, world.y, 0.06),
-    );
+    // A bigger, brighter burst on a boss death; the normal red burst otherwise.
+    let death_particle = if enemy_type == EnemyType::Boss {
+        ParticleType::BossDeath
+    } else {
+        ParticleType::Death
+    };
+    spawn_particle(commands, death_particle, Vec3::new(world.x, world.y, 0.06));
     commands.entity(entity).despawn();
     statistics.enemies_killed += 1;
 
-    // Gold reward, scaled by run depth, with a floating "+N" number.
+    // Gold reward, scaled by run depth, with a floating "+N" number + a small
+    // gold sparkle.
     let reward = tuning::GOLD_PER_KILL_BASE + tuning::GOLD_PER_KILL_FLOOR_BONUS * floor.max(0);
     gold.0 += reward;
     crate::systems::damage_numbers::spawn_gold_number(commands, world, reward);
+    spawn_particle(commands, ParticleType::GoldPickup, Vec3::new(world.x, world.y, 0.055));
 
     // Despawn the matching health bar.
     for (bar_entity, HealthBar(owner)) in health_bars.iter() {

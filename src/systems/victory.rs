@@ -16,10 +16,13 @@ pub fn victory(
     statistics: Res<Statistics>,
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut sfx: MessageWriter<crate::resources::SfxEvent>,
 ) {
     if *game_state.get() == GameState::Playing
         && determine_victory(&map.victory_condition, &player_query, &enemy_query)
     {
+        // A celebratory floor-clear fanfare regardless of which end it leads to.
+        sfx.write(crate::resources::SfxEvent::FloorClear);
         // Clearing this floor brings the cleared count to floors_completed + 1.
         if statistics.floors_completed + 1 >= RUN_FLOOR_CAP {
             next_state.set(GameState::Victory);

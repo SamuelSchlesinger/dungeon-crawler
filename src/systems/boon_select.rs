@@ -36,6 +36,7 @@ pub fn boon_select(
     mut gold: ResMut<Gold>,
     mut acquired: ResMut<AcquiredBoons>,
     mut offer: ResMut<BoonOffer>,
+    mut sfx: MessageWriter<SfxEvent>,
     statistics: Res<Statistics>,
     mut player_query: Query<&mut Health, With<Player>>,
 ) -> Result {
@@ -183,10 +184,16 @@ pub fn boon_select(
         }
     }
 
+    if do_reroll || do_heal {
+        // Confirming a shop action plays the boon cue too (a confident chord).
+        sfx.write(SfxEvent::BoonSelect);
+    }
+
     if let Some(i) = picked {
         if let Some(boon) = offer.choices.get(i).copied() {
             let heal = boons::apply(&boon, &mut player_stats);
             acquired.0.push(boon.name);
+            sfx.write(SfxEvent::BoonSelect);
             if heal > 0 {
                 if let Some(mut health) = player_query.iter_mut().next() {
                     health.0 = (health.0 + heal).min(player_stats.effective_max_hp());
