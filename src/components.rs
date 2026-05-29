@@ -50,6 +50,18 @@ pub struct SpriteIndex(pub usize);
 #[derive(Component, Debug)]
 pub struct Tile;
 
+/// The full-brightness color a tile should render at when in line of sight. The
+/// fog system multiplies this down for explored-but-unseen ("dimmed") tiles, so
+/// it needs the un-dimmed base to restore from. Set once at spawn.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct TileBaseColor(pub Color);
+
+/// Marks the victory / exit tile so it can be tinted distinctly and located for
+/// the off-screen objective arrow. Only present on `VictoryCondition::Arrival`
+/// target tiles.
+#[derive(Component, Debug)]
+pub struct ExitMarker;
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EnemyType {
     Skeleton,  // Fast, weak (sprite: 2700)
@@ -204,9 +216,15 @@ pub struct Dash {
 }
 
 /// Transient red tint applied to an actor that just took damage. Removed when the
-/// timer finishes (which restores the sprite color).
+/// timer finishes (which restores the sprite color to `ActorBaseColor`).
 #[derive(Component, Debug)]
 pub struct HitFlash(pub Timer);
+
+/// The resting sprite color of an actor (player white, enemies per-type tint).
+/// Used by `hit_flash` to restore the correct color after a hit flash instead of
+/// clobbering per-type enemy tints back to plain white.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ActorBaseColor(pub Color);
 
 /// Real-time enemy attack state machine: idle -> telegraph (windup) -> strike,
 /// then cooldown back to idle.
@@ -226,6 +244,15 @@ pub struct RepathTimer(pub Timer);
 /// its own lifetime timer and is despawned when it expires or on floor teardown.
 #[derive(Component, Debug)]
 pub struct TransientVisual(pub Timer);
+
+/// A short-lived floating damage number (Text2d in world space) that rises and
+/// fades, then despawns. Spawned wherever damage is applied.
+#[derive(Component, Debug)]
+pub struct DamageNumber {
+    pub timer: Timer,
+    /// Base RGB color (alpha is animated by the fade).
+    pub color: Color,
+}
 
 #[derive(Component)]
 pub struct Particle {
