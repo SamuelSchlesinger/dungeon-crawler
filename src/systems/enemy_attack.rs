@@ -35,7 +35,16 @@ pub fn enemy_attack(
             &mut Transform,
             &mut Health,
         ),
-        (With<Enemy>, Without<Player>),
+        // Exclude special enemies: Charger/Bomber/Boss have their own attack +
+        // telegraph-scale systems (enemy_special). Letting the generic melee here
+        // also drive their Transform.scale caused flicker + a double attack.
+        (
+            With<Enemy>,
+            Without<Player>,
+            Without<ChargeState>,
+            Without<BomberFuse>,
+            Without<Boss>,
+        ),
     >,
     mut player_query: Query<
         (Entity, &WorldPos, &mut Health, &mut Knockback, &Dash),

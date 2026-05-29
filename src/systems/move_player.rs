@@ -48,18 +48,24 @@ pub fn move_player(
     let dt = time.delta_secs();
     let scale = scale_factor.0;
 
-    // Manual floor change (kept for the layered/avoidance maps which use z).
+    // Manual floor change (for layered maps that use z) -- only where a passable
+    // tile actually exists above/below. Procedural & boss floors are single-z;
+    // without this guard E/Q teleported the player onto an empty z-plane (no tiles,
+    // frozen, can't win or die) -- a softlock.
     if keyboard_input.just_pressed(KeyCode::KeyE) {
-        position.z += 1;
-        floor.0 = position.z;
-        // Re-anchor the continuous position onto the new floor's grid tile.
-        let c = crate::utils::grid_to_world_center(position.x, position.y, scale);
-        world_pos.0 = c;
+        let target = Position::new(position.x, position.y, position.z + 1);
+        if tiles.get(&target).is_some_and(|t| t.passable) {
+            position.z += 1;
+            floor.0 = position.z;
+            world_pos.0 = crate::utils::grid_to_world_center(position.x, position.y, scale);
+        }
     } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
-        position.z -= 1;
-        floor.0 = position.z;
-        let c = crate::utils::grid_to_world_center(position.x, position.y, scale);
-        world_pos.0 = c;
+        let target = Position::new(position.x, position.y, position.z - 1);
+        if tiles.get(&target).is_some_and(|t| t.passable) {
+            position.z -= 1;
+            floor.0 = position.z;
+            world_pos.0 = crate::utils::grid_to_world_center(position.x, position.y, scale);
+        }
     }
 
     // Desired movement direction from WASD.
