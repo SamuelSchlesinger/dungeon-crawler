@@ -59,6 +59,53 @@ fn actor_sprite(
     sprite
 }
 
+/// Attaches Wave 4 per-type special-behavior state components to a freshly
+/// spawned enemy. No-op for the basic chaser types (Skeleton/Orc/Ghost).
+fn insert_special_components(enemy: &mut bevy::ecs::system::EntityCommands, enemy_type: EnemyType) {
+    match enemy_type {
+        EnemyType::Archer => {
+            enemy.insert(ArcherShoot(Timer::from_seconds(
+                tuning::ARCHER_SHOOT_COOLDOWN * rand::random::<f32>(),
+                TimerMode::Once,
+            )));
+        }
+        EnemyType::Charger => {
+            enemy.insert(ChargeState {
+                phase: ChargePhase::Walking,
+                timer: Timer::from_seconds(0.0, TimerMode::Once),
+                dir: Vec2::ZERO,
+                hit_landed: false,
+            });
+        }
+        EnemyType::Bomber => {
+            enemy.insert(BomberFuse {
+                timer: Timer::from_seconds(tuning::BOMBER_FUSE, TimerMode::Once),
+                armed: false,
+            });
+        }
+        EnemyType::Boss => {
+            enemy.insert((
+                Boss,
+                BossAttacks {
+                    burst: Timer::from_seconds(tuning::BOSS_BURST_COOLDOWN * 0.5, TimerMode::Once),
+                    charge_cd: Timer::from_seconds(tuning::BOSS_CHARGE_COOLDOWN, TimerMode::Once),
+                    summon: Timer::from_seconds(
+                        tuning::BOSS_SUMMON_COOLDOWN * 0.6,
+                        TimerMode::Once,
+                    ),
+                    charge: ChargeState {
+                        phase: ChargePhase::Walking,
+                        timer: Timer::from_seconds(0.0, TimerMode::Once),
+                        dir: Vec2::ZERO,
+                        hit_landed: false,
+                    },
+                },
+            ));
+        }
+        EnemyType::Skeleton | EnemyType::Orc | EnemyType::Ghost => {}
+    }
+}
+
 pub fn initialize_resources(
     mut commands: &mut Commands,
     map: &map::Map,
@@ -187,9 +234,13 @@ pub fn setup_play(
             z: *z,
         };
         let is_exit = exit_position == Some(tile_pos);
-        // The exit tile gets a distinct gold tint so it stands out once revealed.
+        // Wave 4: tiles authored with the hazard sprite become damaging hazards.
+        let is_hazard = tile.sprite_index == crate::maps::HAZARD_SPRITE;
+        // The exit tile gets a distinct gold tint; hazards a glowing red-orange.
         let base_color = if is_exit {
             Color::srgb(1.0, 0.85, 0.2)
+        } else if is_hazard {
+            tuning::hazard_tint()
         } else {
             Color::WHITE
         };
@@ -225,6 +276,12 @@ pub fn setup_play(
         if is_exit {
             tile_cmd.insert(ExitMarker);
         }
+        if is_hazard {
+            tile_cmd.insert(Hazard(Timer::from_seconds(
+                tuning::HAZARD_TICK_INTERVAL,
+                TimerMode::Once,
+            )));
+        }
         let entity = tile_cmd.id();
         tiles.insert(
             Position {
@@ -240,8 +297,11 @@ pub fn setup_play(
     }
 
     for (Position { x, y, z }, enemy) in (&room.enemies).into_iter() {
-        // Randomize enemy type for variety, scale stats by run depth
-        let enemy_type = EnemyType::random();
+        // Use the stored type when the map encodes a real enemy-type sprite
+        // (procedural floors + the boss), else randomize for variety (the
+        // hand-authored unbeatable/avoidance maps). Stats scale by run depth.
+        let enemy_type = EnemyType::from_sprite_index(enemy.sprite_index as usize)
+            .unwrap_or_else(EnemyType::random);
         let (health, strength) = enemy_type.get_stats(run_depth);
         let sprite_idx = enemy_type.sprite_index();
 
@@ -301,6 +361,9 @@ pub fn setup_play(
                 TimerMode::Once,
             )),
         ));
+
+        // Wave 4: per-type special-behavior state components.
+        insert_special_components(&mut enemy_entity, enemy_type);
 
         let enemy_id = enemy_entity.id();
 

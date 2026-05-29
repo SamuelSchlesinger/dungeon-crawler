@@ -54,10 +54,25 @@ fn main() {
                 move_player,
                 // Player melee/ranged/AoE + enemy AI (after the player moved).
                 player_attack.after(move_player),
-                // Ranged projectiles travel + resolve hits after they're fired.
-                move_projectiles.after(player_attack),
                 enemy_move.after(move_player),
                 enemy_attack.after(enemy_move),
+                // Wave 4 special enemy behaviors. Run after enemy_move so the
+                // default mover and these never alias the same enemy WorldPos in
+                // one system; charger/boss take over position only during their
+                // own active phases (enemy_move yields via the self_driven check).
+                archer_shoot.after(enemy_move),
+                charger_ai.after(enemy_move),
+                bomber_ai.after(enemy_move),
+                boss_ai.after(enemy_move),
+                // Projectiles (player ranged + enemy/archer/boss shots) travel +
+                // resolve hits after everything that may have spawned them.
+                move_projectiles
+                    .after(player_attack)
+                    .after(archer_shoot)
+                    .after(boss_ai),
+                // Resolve pending bomber/explosion AoE after the bomber fuse +
+                // any death-detonations are queued.
+                resolve_explosions.after(bomber_ai),
                 // Camera follows the post-move player position.
                 follow.after(move_player),
                 move_camera,
@@ -70,6 +85,9 @@ fn main() {
                 // Pickups / stat application.
                 health,
                 pickup_weapon,
+                // Wave 4 room hazards: DoT for actors on hazard tiles. After the
+                // movers so grid positions are synced this frame.
+                hazard_tick.after(move_player).after(enemy_move),
                 // Feedback + visuals.
                 hit_flash,
                 update_transient_visuals,
@@ -80,12 +98,15 @@ fn main() {
                 // Fog of war (reads synced grid positions).
                 fog_of_war.after(move_player),
                 set_visibility.after(fog_of_war),
-                // Reap enemies killed indirectly (e.g. thorns reflection) and
-                // award their gold, BEFORE rebuilding the occupancy resource.
+                // Reap enemies killed indirectly (thorns, explosions, hazards,
+                // charger/boss damage) and award their gold, BEFORE rebuilding the
+                // occupancy resource. After every system that can drop enemy HP.
                 reap_dead_enemies
                     .after(player_attack)
                     .after(enemy_attack)
-                    .after(move_projectiles),
+                    .after(move_projectiles)
+                    .after(resolve_explosions)
+                    .after(hazard_tick),
                 // Resource sync + win/lose, after combat may have despawned.
                 cleanup_dead_enemies
                     .after(player_attack)

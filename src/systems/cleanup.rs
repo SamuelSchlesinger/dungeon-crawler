@@ -3,12 +3,17 @@ use bevy::prelude::*;
 use crate::components::*;
 use crate::resources::*;
 use crate::systems::particle_system::spawn_particle;
+use crate::tuning;
 
 /// Despawns any enemy whose `Health` has dropped to zero or below but that was
 /// not despawned by its killer (e.g. thorns reflection in `enemy_attack`, which
 /// has no access to the gold/loot resources). Credits the kill, gold, and a
 /// floating "+N" gold number, and removes the enemy's health bar. Runs before
 /// `cleanup_dead_enemies` so the occupancy resource is rebuilt from survivors.
+///
+/// Wave 4: a dying Bomber spawns an `Explosion` so killing it still detonates
+/// (resolved by `resolve_explosions`). The explosion is spawned as its own
+/// entity, so no actor query aliasing occurs here.
 ///
 /// Disjoint queries: the enemy query is `With<Enemy>` and the health-bar query
 /// is `With<HealthBar>` (a separate marker on separate entities), so no B0001.
@@ -18,13 +23,45 @@ pub fn reap_dead_enemies(
     mut statistics: ResMut<Statistics>,
     mut gold: ResMut<Gold>,
     floor: Res<Floor>,
-    enemy_query: Query<(Entity, &WorldPos, &Health), With<Enemy>>,
+    scale_factor: Res<ScaleFactor>,
+    enemy_query: Query<(Entity, &WorldPos, &Health, &EnemyType), With<Enemy>>,
     health_bars: Query<(Entity, &HealthBar)>,
 ) {
-    for (entity, world, health) in enemy_query.iter() {
+    let scale = scale_factor.0;
+    for (entity, world, health, enemy_type) in enemy_query.iter() {
         if health.0 > 0 {
             continue;
         }
+
+        // A dying bomber detonates: spawn an explosion + ring visual.
+        if *enemy_type == EnemyType::Bomber {
+            let dmg = ((enemy_type.get_stats(floor.0.max(0)).1 as f32)
+                * tuning::BOMBER_DAMAGE_MULT)
+                .round()
+                .max(1.0) as i64;
+            commands.spawn((Explosion {
+                center: world.0,
+                radius: tuning::BOMBER_EXPLOSION_RADIUS_TILES * scale,
+                damage: dmg,
+                knockback: tuning::BOMBER_KNOCKBACK_TILES * scale,
+            },));
+            commands.spawn((
+                Sprite {
+                    color: Color::srgba(1.0, 0.5, 0.1, 0.6),
+                    custom_size: Some(Vec2::splat(
+                        tuning::BOMBER_EXPLOSION_RADIUS_TILES * scale * 2.0,
+                    )),
+                    ..default()
+                },
+                Transform::from_xyz(world.0.x, world.0.y, 0.07),
+                Visibility::Visible,
+                TransientVisual(Timer::from_seconds(
+                    tuning::SWING_VISUAL_LIFETIME * 2.0,
+                    TimerMode::Once,
+                )),
+            ));
+        }
+
         spawn_particle(
             &mut commands,
             ParticleType::Death,

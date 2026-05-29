@@ -7,6 +7,7 @@ use crate::resources::*;
 /// Top-bar HUD drawn with egui during play: a player HP bar + number, the
 /// current floor, gold, the equipped weapon type, and a compact boon count.
 /// Runs in `EguiPrimaryContextPass` like the menu/end screens.
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn hud(
     mut contexts: EguiContexts,
     statistics: Res<Statistics>,
@@ -14,7 +15,8 @@ pub fn hud(
     active_weapon: Res<ActiveWeapon>,
     acquired: Res<AcquiredBoons>,
     player_stats: Res<PlayerStats>,
-    player_query: Query<&Health, With<Player>>,
+    player_query: Query<&Health, (With<Player>, Without<Boss>)>,
+    boss_query: Query<(&Health, &OriginalHealth), (With<Boss>, With<Enemy>, Without<Player>)>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
@@ -105,6 +107,41 @@ pub fn hud(
                 }
             });
         });
+
+    // Prominent BOSS health bar -- only shown while a boss is alive. A wide red
+    // bar centered near the top of the screen, distinct from the player's HUD.
+    if let Some((boss_health, boss_max)) = boss_query.iter().next() {
+        let bhp = boss_health.0.max(0);
+        let bmax = boss_max.0.max(1);
+        let bfraction = (bhp as f32 / bmax as f32).clamp(0.0, 1.0);
+        egui::TopBottomPanel::top("boss_bar")
+            .frame(
+                egui::Frame::NONE
+                    .fill(egui::Color32::from_rgba_unmultiplied(20, 0, 0, 180))
+                    .inner_margin(egui::Margin::symmetric(12, 10)),
+            )
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new("\u{2620} BOSS \u{2620}")
+                            .size(22.0)
+                            .strong()
+                            .color(egui::Color32::from_rgb(255, 80, 80)),
+                    );
+                    ui.add(
+                        egui::ProgressBar::new(bfraction)
+                            .desired_width(560.0)
+                            .fill(egui::Color32::from_rgb(200, 30, 40))
+                            .text(
+                                egui::RichText::new(format!("{bhp} / {bmax}"))
+                                    .size(15.0)
+                                    .strong()
+                                    .color(egui::Color32::WHITE),
+                            ),
+                    );
+                });
+            });
+    }
 
     Ok(())
 }

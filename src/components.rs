@@ -24,11 +24,24 @@ pub struct WakeZone(pub BTreeSet<Position>);
 #[derive(Component, Debug)]
 pub struct Awake(pub bool);
 
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AIBehavior {
     Aggressive,   // Always chase player
     Defensive,    // Retreat when health < 30%
     Patrol,       // Random movement, chase when close
+    /// Wave 4: keeps `ARCHER_PREFERRED_RANGE` from the player, firing arrows and
+    /// retreating when the player closes in. Movement handled in `enemy_move`,
+    /// shooting in `archer_shoot`.
+    Kiting,
+    /// Wave 4: walks toward the player, then telegraphs + dashes in a straight
+    /// line (see `charger_ai`). Normal `enemy_move` chase steering is suppressed
+    /// while a charge state machine is active.
+    Charging,
+    /// Wave 4: rushes the player and explodes on contact or death (`bomber_ai`).
+    Exploding,
+    /// Wave 4: the boss runs its own combined attack pattern (`boss_ai`); its
+    /// movement is a slow chase via the normal mover.
+    BossPattern,
 }
 
 impl AIBehavior {
@@ -37,6 +50,10 @@ impl AIBehavior {
             EnemyType::Skeleton => AIBehavior::Aggressive,
             EnemyType::Orc => AIBehavior::Patrol,
             EnemyType::Ghost => AIBehavior::Defensive,
+            EnemyType::Archer => AIBehavior::Kiting,
+            EnemyType::Charger => AIBehavior::Charging,
+            EnemyType::Bomber => AIBehavior::Exploding,
+            EnemyType::Boss => AIBehavior::BossPattern,
         }
     }
 }
@@ -67,6 +84,14 @@ pub enum EnemyType {
     Skeleton,  // Fast, weak (sprite: 2700)
     Orc,       // Balanced (sprite: 2701)
     Ghost,     // Slow, strong (sprite: 2702)
+    /// Wave 4: ranged kiter that fires enemy projectiles and keeps its distance.
+    Archer,
+    /// Wave 4: bruiser that telegraphs then dashes in a straight line.
+    Charger,
+    /// Wave 4: exploder that rushes and detonates (AoE + knockback).
+    Bomber,
+    /// Wave 4: the floor boss (one per boss floor) with a combined attack pattern.
+    Boss,
 }
 
 impl EnemyType {
@@ -77,6 +102,13 @@ impl EnemyType {
             EnemyType::Skeleton => (3, 1),   // Fast but fragile
             EnemyType::Orc => (7, 2),        // Balanced
             EnemyType::Ghost => (10, 3),     // Strong and tanky
+            EnemyType::Archer => (5, 2),     // Fragile-ish ranged attacker
+            EnemyType::Charger => (12, 3),   // Tanky bruiser
+            EnemyType::Bomber => (4, 2),     // Fragile; the threat is the boom
+            EnemyType::Boss => (
+                crate::tuning::BOSS_BASE_HP,
+                crate::tuning::BOSS_BASE_STRENGTH,
+            ),
         };
         (
             ((base_stats.0 as f32) * floor_multiplier) as i64,
@@ -89,17 +121,51 @@ impl EnemyType {
             EnemyType::Skeleton => 2700,
             EnemyType::Orc => 2701,
             EnemyType::Ghost => 2702,
+            // Reuse existing tilesheet glyphs (no new assets); distinct tints +
+            // scales (see tuning::enemy_visual) make the types read at a glance.
+            EnemyType::Archer => 2703,
+            EnemyType::Charger => 2704,
+            EnemyType::Bomber => 2705,
+            EnemyType::Boss => 2706,
         }
     }
 
+    /// Random NON-boss enemy type, weighted for procedural spawns. Bosses are
+    /// never produced here -- they are placed explicitly on boss floors.
     pub fn random() -> Self {
         let r: f32 = rand::random();
-        if r < 0.4 {
+        // Weights: Skeleton .28, Orc .20, Ghost .14, Archer .16, Charger .12,
+        // Bomber .10 (sum 1.0).
+        if r < 0.28 {
             EnemyType::Skeleton
-        } else if r < 0.7 {
+        } else if r < 0.48 {
             EnemyType::Orc
-        } else {
+        } else if r < 0.62 {
             EnemyType::Ghost
+        } else if r < 0.78 {
+            EnemyType::Archer
+        } else if r < 0.90 {
+            EnemyType::Charger
+        } else {
+            EnemyType::Bomber
+        }
+    }
+
+    /// Recovers an `EnemyType` from a stored sprite index, if it is one of the
+    /// known enemy-type sprites. Hand-authored maps (unbeatable/avoidance) store
+    /// arbitrary sprites that aren't enemy types, so `setup_play` falls back to a
+    /// random type for those; procedural floors store real type sprites so the
+    /// intended type (including the Boss) round-trips exactly.
+    pub fn from_sprite_index(index: usize) -> Option<Self> {
+        match index {
+            2700 => Some(EnemyType::Skeleton),
+            2701 => Some(EnemyType::Orc),
+            2702 => Some(EnemyType::Ghost),
+            2703 => Some(EnemyType::Archer),
+            2704 => Some(EnemyType::Charger),
+            2705 => Some(EnemyType::Bomber),
+            2706 => Some(EnemyType::Boss),
+            _ => None,
         }
     }
 }
@@ -288,21 +354,98 @@ pub struct RepathTimer(pub Timer);
 #[derive(Component, Debug)]
 pub struct TransientVisual(pub Timer);
 
-/// A player-fired ranged projectile (Wave 3). Travels in `velocity` until it
-/// hits an enemy, hits a wall, or exceeds its remaining travel distance, then
-/// despawns. Carries the (already crit-rolled) damage and knockback to apply.
+/// Which side fired a projectile. Player projectiles damage enemies; enemy
+/// projectiles damage the player (respecting dash i-frames). Used by
+/// `move_projectiles` to pick the correct (disjoint) target query, avoiding
+/// B0001 query-conflict panics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectileFaction {
+    Player,
+    Enemy,
+}
+
+/// A ranged projectile (Wave 3 player shots; Wave 4 enemy shots). Travels in
+/// `velocity` until it hits a valid target, hits a wall, or exceeds its
+/// remaining travel distance, then despawns. Carries the (already crit-rolled)
+/// damage and knockback to apply.
 #[derive(Component, Debug)]
 pub struct Projectile {
     /// World-units/sec travel velocity.
     pub velocity: Vec2,
     /// Remaining world-unit distance before the projectile fizzles out.
     pub remaining: f32,
-    /// Damage applied to the first enemy hit.
+    /// Damage applied to the first valid target hit.
     pub damage: i64,
-    /// Knockback impulse (world units/sec) applied to the enemy hit.
+    /// Knockback impulse (world units/sec) applied to the target hit.
     pub knockback: f32,
     /// Whether this shot rolled a critical hit (for damage-number coloring).
     pub crit: bool,
+    /// Who fired this shot (decides what it can hit).
+    pub faction: ProjectileFaction,
+}
+
+/// Wave 4 archer shooting cadence: ticks while the archer is alive; when finished
+/// (and the player is in fire range) it fires an enemy arrow and resets.
+#[derive(Component, Debug)]
+pub struct ArcherShoot(pub Timer);
+
+/// Wave 4 charger state machine: walk -> windup (telegraph) -> dash -> recover.
+#[derive(Component, Debug)]
+pub struct ChargeState {
+    pub phase: ChargePhase,
+    pub timer: Timer,
+    /// Locked-in dash direction (unit vector), captured at the end of windup.
+    pub dir: Vec2,
+    /// True once the slam has connected during this dash (so it hits once).
+    pub hit_landed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChargePhase {
+    Walking,
+    WindingUp,
+    Dashing,
+    Recovering,
+}
+
+/// Wave 4 bomber fuse state. `armed` becomes true once the fuse starts (player in
+/// range or bomber killed); when the timer finishes the bomber explodes.
+#[derive(Component, Debug)]
+pub struct BomberFuse {
+    pub timer: Timer,
+    pub armed: bool,
+}
+
+/// Wave 4 boss attack-pattern cadences (burst / charge / summon), each an
+/// independent cooldown so the boss interleaves all three over time.
+#[derive(Component, Debug)]
+pub struct BossAttacks {
+    pub burst: Timer,
+    pub charge_cd: Timer,
+    pub summon: Timer,
+    /// Charge sub-state reuses `ChargeState` semantics inline.
+    pub charge: ChargeState,
+}
+
+/// Marker for the floor boss. Drives the prominent boss health bar in the HUD and
+/// the boss-floor extermination victory.
+#[derive(Component, Debug)]
+pub struct Boss;
+
+/// Marks a tile that periodically damages any actor standing on it (Wave 4
+/// hazard: spikes / lava). Carries its own DoT tick timer.
+#[derive(Component, Debug)]
+pub struct Hazard(pub Timer);
+
+/// A pending explosion (bomber detonation) resolved by `resolve_explosions`. Kept
+/// as a separate entity so the bomber's death and the AoE damage are decoupled
+/// from any single actor query, keeping queries disjoint (B0001-safe).
+#[derive(Component, Debug)]
+pub struct Explosion {
+    pub center: Vec2,
+    pub radius: f32,
+    pub damage: i64,
+    pub knockback: f32,
 }
 
 /// A short-lived floating damage number (Text2d in world space) that rises and

@@ -17,19 +17,26 @@ pub struct KillRewards<'w> {
     pub sprite_texture: Res<'w, SpriteTexture>,
 }
 
-/// Moves player-fired projectiles and resolves hits (Wave 3 ranged weapons).
+/// Moves projectiles (player AND enemy) and resolves hits.
 ///
 /// Each projectile travels along its `velocity`, despawning when it (a) exceeds
-/// its remaining travel distance, (b) enters a solid tile, or (c) hits the first
-/// enemy within `PROJECTILE_HIT_RADIUS_TILES`. On an enemy hit it applies the
-/// pre-rolled damage + knockback, hit flash, damage number, lifesteal, gold on
-/// kill, and a weapon drop chance -- mirroring the melee path in `attack.rs`.
+/// its remaining travel distance, (b) enters a solid tile, or (c) hits a valid
+/// target within `PROJECTILE_HIT_RADIUS_TILES`. The target depends on the
+/// projectile's `faction`:
+/// - **Player** shots hit the first enemy: apply pre-rolled damage + knockback,
+///   hit flash, damage number, lifesteal, gold on kill, and a weapon-drop roll
+///   (mirroring the melee path in `attack.rs`).
+/// - **Enemy** shots hit the player: apply damage + knockback + hit flash UNLESS
+///   the player is dash-invulnerable (i-frames), and despawn the player on a
+///   lethal hit (defeat observes the missing player next frame).
 ///
-/// Query disjointness (B0001): the projectile query (`With<Projectile>`) and the
-/// enemy query (`With<Enemy>, Without<Player>`) and player query
+/// Query disjointness (B0001): the projectile query (`With<Projectile>`), the
+/// enemy query (`With<Enemy>, Without<Player>`), and the player query
 /// (`With<Player>, Without<Enemy>`) are over disjoint entity sets. Projectiles
 /// carry neither `Enemy` nor `Player`, so there is no overlap on `Transform` or
-/// any other shared component.
+/// any other shared component. The player query includes `&Dash` (to respect
+/// i-frames) and `&mut Knockback`, neither of which the enemy query touches on
+/// the same entity.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn move_projectiles(
     mut commands: Commands,
@@ -42,10 +49,13 @@ pub fn move_projectiles(
     sprite_texture: Res<SpriteTexture>,
     mut projectiles: Query<(Entity, &mut Transform, &mut Projectile)>,
     mut enemy_query: Query<
-        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position),
+        (Entity, &WorldPos, &mut Health, &mut Knockback, &Position, &EnemyType),
         (With<Enemy>, Without<Player>),
     >,
-    mut player_query: Query<&mut Health, (With<Player>, Without<Enemy>)>,
+    mut player_query: Query<
+        (Entity, &WorldPos, &mut Health, &mut Knockback, &Dash),
+        (With<Player>, Without<Enemy>),
+    >,
     health_bars: Query<(Entity, &HealthBar)>,
     player_stats: Res<PlayerStats>,
     floor: Res<Floor>,
@@ -83,73 +93,136 @@ pub fn move_projectiles(
         transform.translation.x = new_pos.x;
         transform.translation.y = new_pos.y;
 
-        // First enemy within the hit radius takes the hit.
-        let mut hit: Option<Entity> = None;
-        let mut best = f32::MAX;
-        for (entity, enemy_world, _h, _k, _p) in enemy_query.iter() {
-            let d = (enemy_world.0 - new_pos).length();
-            if d <= hit_radius && d < best {
-                best = d;
-                hit = Some(entity);
-            }
-        }
-
-        if let Some(enemy_entity) = hit {
-            if let Ok((entity, enemy_world, mut health, mut knockback, grid_pos)) =
-                enemy_query.get_mut(enemy_entity)
-            {
-                let dmg = projectile.damage;
-                health.0 -= dmg;
-                statistics.damage_dealt += dmg;
-
-                // Lifesteal heals the player from projectile damage too.
-                if player_stats.lifesteal > 0.0 {
-                    if let Some(mut php) = player_query.iter_mut().next() {
-                        let heal = (dmg as f32 * player_stats.lifesteal).round() as i64;
-                        if heal > 0 {
-                            php.0 = (php.0 + heal).min(player_stats.effective_max_hp());
-                        }
+        match projectile.faction {
+            ProjectileFaction::Player => {
+                // First enemy within the hit radius takes the hit.
+                let mut hit: Option<Entity> = None;
+                let mut best = f32::MAX;
+                for (entity, enemy_world, _h, _k, _p, _t) in enemy_query.iter() {
+                    let d = (enemy_world.0 - new_pos).length();
+                    if d <= hit_radius && d < best {
+                        best = d;
+                        hit = Some(entity);
                     }
                 }
 
-                let color = if projectile.crit {
-                    crate::systems::damage_numbers::DAMAGE_CRIT
-                } else {
-                    crate::systems::damage_numbers::DAMAGE_TO_ENEMY
+                if let Some(enemy_entity) = hit {
+                    if let Ok((entity, enemy_world, mut health, mut knockback, grid_pos, enemy_type)) =
+                        enemy_query.get_mut(enemy_entity)
+                    {
+                        let dmg = projectile.damage;
+                        health.0 -= dmg;
+                        statistics.damage_dealt += dmg;
+
+                        // Lifesteal heals the player from projectile damage too.
+                        if player_stats.lifesteal > 0.0 {
+                            if let Some((_e, _w, mut php, _k, _d)) =
+                                player_query.iter_mut().next()
+                            {
+                                let heal =
+                                    (dmg as f32 * player_stats.lifesteal).round() as i64;
+                                if heal > 0 {
+                                    php.0 =
+                                        (php.0 + heal).min(player_stats.effective_max_hp());
+                                }
+                            }
+                        }
+
+                        let color = if projectile.crit {
+                            crate::systems::damage_numbers::DAMAGE_CRIT
+                        } else {
+                            crate::systems::damage_numbers::DAMAGE_TO_ENEMY
+                        };
+                        crate::systems::damage_numbers::spawn_damage_number(
+                            &mut commands,
+                            enemy_world.0,
+                            dmg,
+                            color,
+                        );
+
+                        let dir = projectile.velocity.normalize_or_zero();
+                        knockback.0 += dir * projectile.knockback;
+
+                        commands.entity(entity).insert(HitFlash(Timer::from_seconds(
+                            tuning::HIT_FLASH_DURATION,
+                            TimerMode::Once,
+                        )));
+                        spawn_particle(
+                            &mut commands,
+                            ParticleType::HitSpark,
+                            Vec3::new(enemy_world.0.x, enemy_world.0.y, 0.06),
+                        );
+
+                        if health.0 <= 0 {
+                            on_enemy_killed(
+                                &mut commands,
+                                entity,
+                                enemy_world.0,
+                                *grid_pos,
+                                &mut statistics,
+                                &mut gold,
+                                &mut weapon_drops,
+                                &sprite_texture,
+                                &health_bars,
+                                floor.0,
+                                *enemy_type,
+                                scale,
+                            );
+                        }
+
+                        commands.entity(proj_entity).despawn();
+                    }
+                }
+            }
+            ProjectileFaction::Enemy => {
+                // Enemy shots target the player.
+                let Some((player_entity, player_world, mut player_health, mut player_kb, dash)) =
+                    player_query.iter_mut().next()
+                else {
+                    continue;
                 };
+                let d = (player_world.0 - new_pos).length();
+                if d > hit_radius {
+                    continue;
+                }
+
+                // Dash i-frames negate the hit entirely (projectile passes
+                // through), so dodging through enemy fire works.
+                if crate::systems::dash::player_invulnerable(dash) {
+                    commands.entity(proj_entity).despawn();
+                    continue;
+                }
+
+                let dmg = projectile.damage;
+                player_health.0 -= dmg;
+                statistics.damage_taken += dmg;
+
                 crate::systems::damage_numbers::spawn_damage_number(
                     &mut commands,
-                    enemy_world.0,
+                    player_world.0,
                     dmg,
-                    color,
+                    crate::systems::damage_numbers::DAMAGE_TO_PLAYER,
                 );
 
                 let dir = projectile.velocity.normalize_or_zero();
-                knockback.0 += dir * projectile.knockback;
+                player_kb.0 += dir * projectile.knockback;
 
-                commands.entity(entity).insert(HitFlash(Timer::from_seconds(
-                    tuning::HIT_FLASH_DURATION,
-                    TimerMode::Once,
-                )));
+                commands.entity(player_entity).insert(HitFlash(
+                    Timer::from_seconds(tuning::HIT_FLASH_DURATION, TimerMode::Once),
+                ));
                 spawn_particle(
                     &mut commands,
                     ParticleType::HitSpark,
-                    Vec3::new(enemy_world.0.x, enemy_world.0.y, 0.06),
+                    Vec3::new(player_world.0.x, player_world.0.y, 0.06),
                 );
 
-                if health.0 <= 0 {
-                    on_enemy_killed(
+                if player_health.0 <= 0 {
+                    spawn_particle(
                         &mut commands,
-                        entity,
-                        enemy_world.0,
-                        *grid_pos,
-                        &mut statistics,
-                        &mut gold,
-                        &mut weapon_drops,
-                        &sprite_texture,
-                        &health_bars,
-                        floor.0,
+                        ParticleType::Death,
+                        Vec3::new(player_world.0.x, player_world.0.y, 0.06),
                     );
+                    commands.entity(player_entity).despawn();
                 }
 
                 commands.entity(proj_entity).despawn();
@@ -162,6 +235,11 @@ pub fn move_projectiles(
 /// paths: death particles, despawn, kill stat, gold reward, health-bar cleanup,
 /// and the weapon-drop roll. Centralizing this keeps the three attack systems in
 /// lockstep so loot/gold behave identically regardless of weapon type.
+///
+/// Wave 4: `enemy_type` lets a killed Bomber detonate (spawn an `Explosion`)
+/// even when the player's own attack lands the killing blow, so bombers always
+/// explode on death regardless of who killed them. `scale` is the world scale
+/// factor used to size the blast.
 #[allow(clippy::too_many_arguments)]
 pub fn on_enemy_killed(
     commands: &mut Commands,
@@ -174,7 +252,37 @@ pub fn on_enemy_killed(
     sprite_texture: &SpriteTexture,
     health_bars: &Query<(Entity, &HealthBar)>,
     floor: i64,
+    enemy_type: EnemyType,
+    scale: f32,
 ) {
+    // A dying bomber detonates: spawn an explosion + ring visual.
+    if enemy_type == EnemyType::Bomber {
+        let dmg = ((enemy_type.get_stats(floor.max(0)).1 as f32) * tuning::BOMBER_DAMAGE_MULT)
+            .round()
+            .max(1.0) as i64;
+        commands.spawn((Explosion {
+            center: world,
+            radius: tuning::BOMBER_EXPLOSION_RADIUS_TILES * scale,
+            damage: dmg,
+            knockback: tuning::BOMBER_KNOCKBACK_TILES * scale,
+        },));
+        commands.spawn((
+            Sprite {
+                color: Color::srgba(1.0, 0.5, 0.1, 0.6),
+                custom_size: Some(Vec2::splat(
+                    tuning::BOMBER_EXPLOSION_RADIUS_TILES * scale * 2.0,
+                )),
+                ..default()
+            },
+            Transform::from_xyz(world.x, world.y, 0.07),
+            Visibility::Visible,
+            TransientVisual(Timer::from_seconds(
+                tuning::SWING_VISUAL_LIFETIME * 2.0,
+                TimerMode::Once,
+            )),
+        ));
+    }
+
     spawn_particle(
         commands,
         ParticleType::Death,

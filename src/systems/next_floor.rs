@@ -50,8 +50,16 @@ pub fn next_floor(
     // Count this floor as cleared (Statistics is carried forward, not reset).
     statistics.floors_completed += 1;
 
-    // Generate a fresh procedural floor and make it the active map.
-    let new_map: Map = maps::procedural();
+    // The floor we are about to ENTER, 1-indexed (matches the HUD's display).
+    let entering_floor = statistics.floors_completed + 1;
+
+    // Every BOSS_FLOOR_INTERVAL floors, generate a boss arena instead of the
+    // normal procedural layout. Otherwise a fresh procedural floor.
+    let new_map: Map = if entering_floor % crate::tuning::BOSS_FLOOR_INTERVAL == 0 {
+        maps::boss_floor()
+    } else {
+        maps::procedural()
+    };
     commands.insert_resource(new_map);
 
     next_state.set(GameState::Playing);
