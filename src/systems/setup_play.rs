@@ -79,6 +79,13 @@ pub fn initialize_resources(
     commands.insert_resource(Revealed::new());
     commands.insert_resource(VisibleTiles::new());
     commands.insert_resource(ObjectiveMarker::default());
+    // Wave 3 progression resources. Inserted here so they always exist from
+    // Startup; the menu's start path resets them at the beginning of each run.
+    commands.insert_resource(PlayerStats::default());
+    commands.insert_resource(Gold::default());
+    commands.insert_resource(ActiveWeapon::default());
+    commands.insert_resource(AcquiredBoons::default());
+    commands.insert_resource(BoonOffer::default());
     commands.insert_resource(map.clone());
     create_camera(&mut commands, initial_position);
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
@@ -134,6 +141,7 @@ pub fn setup_play(
     mut visible_tiles: ResMut<VisibleTiles>,
     statistics: Option<Res<Statistics>>,
     carry_over: Option<Res<CarryOver>>,
+    player_stats: Option<ResMut<PlayerStats>>,
 ) {
     // Reset position-indexed resources so a freshly entered map never inherits
     // stale entries from a previous floor or run.
@@ -369,11 +377,26 @@ pub fn setup_play(
         );
     }
 
+    // Seed the player's base max HP from the map on a fresh run (PlayerStats
+    // defaults carry base_max_hp == 0), then ensure a PlayerStats resource
+    // exists. PlayerStats persists across floors, so boons accumulate.
+    let mut stats_owned = match player_stats {
+        Some(s) => s.clone(),
+        None => PlayerStats::default(),
+    };
+    if stats_owned.base_max_hp == 0 {
+        stats_owned.base_max_hp = test_map.player_health as i64;
+    }
+    let effective_max_hp = stats_owned.effective_max_hp();
+    commands.insert_resource(stats_owned);
+
     // Carry the player's current health/strength forward between floors when a
-    // run is in progress; otherwise use the map's starting values.
+    // run is in progress; otherwise start at the effective max HP. The player's
+    // OriginalHealth (used by the health bar fraction) tracks effective max HP so
+    // +max-HP boons keep the bar accurate.
     let (player_health, player_strength) = match carry_over.as_ref() {
-        Some(c) => (c.health, c.strength),
-        None => (test_map.player_health as i64, test_map.player_strength as i64),
+        Some(c) => (c.health.min(effective_max_hp), c.strength),
+        None => (effective_max_hp, test_map.player_strength as i64),
     };
 
     let mut player_entity = commands.spawn((
@@ -391,7 +414,7 @@ pub fn setup_play(
         room.initial_position.clone(),
         Player,
         Health(player_health),
-        OriginalHealth(test_map.player_health as i64),
+        OriginalHealth(effective_max_hp.max(1)),
         Strength(player_strength),
         Passable(false),
         SpriteIndex(test_map.player_sprite as usize),

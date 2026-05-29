@@ -32,6 +32,10 @@ fn main() {
         )
         .add_systems(
             EguiPrimaryContextPass,
+            boon_select.run_if(in_state(GameState::BoonSelect)),
+        )
+        .add_systems(
+            EguiPrimaryContextPass,
             (hud, minimap, objective_arrow).run_if(in_state(GameState::Playing)),
         )
         .add_systems(OnEnter(GameState::Playing), setup_play)
@@ -48,8 +52,10 @@ fn main() {
                 dash.before(move_player),
                 // Player real-time movement (reads dash state, syncs grid pos).
                 move_player,
-                // Player melee + enemy AI (after the player has moved).
+                // Player melee/ranged/AoE + enemy AI (after the player moved).
                 player_attack.after(move_player),
+                // Ranged projectiles travel + resolve hits after they're fired.
+                move_projectiles.after(player_attack),
                 enemy_move.after(move_player),
                 enemy_attack.after(enemy_move),
                 // Camera follows the post-move player position.
@@ -74,8 +80,17 @@ fn main() {
                 // Fog of war (reads synced grid positions).
                 fog_of_war.after(move_player),
                 set_visibility.after(fog_of_war),
+                // Reap enemies killed indirectly (e.g. thorns reflection) and
+                // award their gold, BEFORE rebuilding the occupancy resource.
+                reap_dead_enemies
+                    .after(player_attack)
+                    .after(enemy_attack)
+                    .after(move_projectiles),
                 // Resource sync + win/lose, after combat may have despawned.
-                cleanup_dead_enemies.after(player_attack).after(enemy_move),
+                cleanup_dead_enemies
+                    .after(player_attack)
+                    .after(enemy_move)
+                    .after(reap_dead_enemies),
                 cleanup_collected_health.after(health),
                 cleanup_weapon_drops.after(pickup_weapon),
                 victory.after(cleanup_dead_enemies),
@@ -83,6 +98,7 @@ fn main() {
             )
                 .run_if(in_state(GameState::Playing)),
         )
+        .add_systems(OnEnter(GameState::BoonSelect), setup_boon_select)
         .add_systems(OnEnter(GameState::NextFloor), next_floor)
         .add_systems(OnEnter(GameState::Victory), on_victory)
         .add_systems(OnEnter(GameState::Defeat), on_defeat)

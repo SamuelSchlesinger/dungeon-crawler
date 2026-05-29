@@ -16,6 +16,7 @@ pub fn on_victory(
             With<DamageNumber>,
             With<Particle>,
             With<TransientVisual>,
+            With<Projectile>,
         )>,
     >,
 ) {

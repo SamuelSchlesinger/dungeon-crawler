@@ -24,7 +24,9 @@ pub fn victory(
         if statistics.floors_completed + 1 >= RUN_FLOOR_CAP {
             next_state.set(GameState::Victory);
         } else {
-            next_state.set(GameState::NextFloor);
+            // Offer a boon (and the shop) BEFORE generating the next floor. The
+            // BoonSelect screen advances to NextFloor once the player picks.
+            next_state.set(GameState::BoonSelect);
         }
     }
 }

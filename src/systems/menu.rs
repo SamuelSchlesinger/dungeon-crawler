@@ -21,14 +21,20 @@ pub fn menu(
     mut next_state: ResMut<NextState<GameState>>,
 ) -> Result {
     // Shared entry point used by both buttons and key shortcuts: swap in the
-    // chosen map, reset run statistics, drop any carried-over player stats, and
-    // transition to Playing.
+    // chosen map, reset run statistics + the Wave 3 progression state (player
+    // stats, gold, weapon, acquired boons), drop any carried-over player stats,
+    // and transition to Playing. setup_play seeds PlayerStats.base_max_hp from
+    // the chosen map's player_health (these defaults have base_max_hp == 0).
     let start = |commands: &mut Commands,
                  map_ref: &mut map::Map,
                  next_state: &mut NextState<GameState>,
                  new_map: map::Map| {
         *map_ref = new_map;
         commands.insert_resource(Statistics::new());
+        commands.insert_resource(PlayerStats::default());
+        commands.insert_resource(Gold::default());
+        commands.insert_resource(ActiveWeapon::default());
+        commands.insert_resource(AcquiredBoons::default());
         commands.remove_resource::<CarryOver>();
         next_state.set(GameState::Playing);
     };
