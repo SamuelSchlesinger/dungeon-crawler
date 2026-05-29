@@ -23,6 +23,7 @@ pub fn enemy_attack(
     time: Res<Time>,
     scale_factor: Res<ScaleFactor>,
     mut statistics: ResMut<Statistics>,
+    player_stats: Res<PlayerStats>,
     mut enemy_query: Query<
         (
             &WorldPos,
@@ -30,6 +31,7 @@ pub fn enemy_attack(
             &Awake,
             &mut EnemyAttack,
             &mut Transform,
+            &mut Health,
         ),
         (With<Enemy>, Without<Player>),
     >,
@@ -48,7 +50,9 @@ pub fn enemy_attack(
     let range = tuning::ENEMY_ATTACK_RANGE_TILES * scale;
     let invulnerable = player_invulnerable(dash);
 
-    for (enemy_world, strength, awake, mut attack, mut transform) in enemy_query.iter_mut() {
+    for (enemy_world, strength, awake, mut attack, mut transform, mut enemy_health) in
+        enemy_query.iter_mut()
+    {
         attack.cooldown.tick(dt);
 
         let in_range = (player_world.0 - enemy_world.0).length() <= range;
@@ -93,6 +97,22 @@ pub fn enemy_attack(
                         ParticleType::HitSpark,
                         Vec3::new(player_world.0.x, player_world.0.y, 0.06),
                     );
+
+                    // Thorns: reflect a fraction of the hit back at the attacker.
+                    // (Death/gold bookkeeping is left to the cleanup + a separate
+                    // reflected damage number; the attacker just loses HP here.)
+                    if player_stats.thorns > 0.0 {
+                        let reflected =
+                            (strength.0 as f32 * player_stats.thorns).round().max(1.0) as i64;
+                        enemy_health.0 -= reflected;
+                        statistics.damage_dealt += reflected;
+                        crate::systems::damage_numbers::spawn_damage_number(
+                            &mut commands,
+                            enemy_world.0,
+                            reflected,
+                            crate::systems::damage_numbers::DAMAGE_TO_ENEMY,
+                        );
+                    }
 
                     if player_health.0 <= 0 {
                         // Death particles at the player, then despawn (defeat

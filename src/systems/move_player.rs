@@ -33,6 +33,7 @@ pub fn move_player(
     scale_factor: Res<ScaleFactor>,
     tiles: Res<Tiles>,
     mut floor: ResMut<Floor>,
+    player_stats: Res<PlayerStats>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
@@ -79,7 +80,8 @@ pub fn move_player(
     }
 
     // Compose this frame's displacement: walk + dash burst + decaying knockback.
-    let walk = dir * tuning::PLAYER_SPEED_TILES * scale;
+    // Walk speed is the EFFECTIVE move speed (base x boon modifier).
+    let walk = dir * player_stats.effective_move_speed() * scale;
     let dash_vel = if dash.dashing {
         dash.dir * tuning::DASH_SPEED_TILES * scale
     } else {
