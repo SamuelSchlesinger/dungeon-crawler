@@ -8,6 +8,83 @@ use bevy::prelude::*;
 #[derive(Debug, Resource)]
 pub struct Follow(pub bool);
 
+/// Wave 5 -- central "juice" state: screen-shake trauma, hit-stop timer, and the
+/// screen-level flash overlay. One resource so combat systems add juice with a
+/// single `ResMut` param (they are near Bevy's 16-param limit). All decay over
+/// time and have safe no-op defaults, so reading it when nothing is happening
+/// costs nothing visible.
+#[derive(Debug, Resource, Default)]
+pub struct Juice {
+    /// Screen-shake trauma (0..1). Camera offset is `trauma^2 * MAX_OFFSET`.
+    pub trauma: f32,
+    /// Remaining hit-stop time (real seconds). While > 0, `Time<Virtual>` is
+    /// slowed; counted down on REAL time so the UI/menus stay responsive.
+    pub hitstop_remaining: f32,
+    /// Active screen flash, if any (color + remaining + total duration).
+    pub flash: Option<ScreenFlash>,
+    /// The camera shake offset applied LAST frame. Subtracted before re-applying
+    /// so the offset never accumulates as drift (esp. when follow is off and the
+    /// anchor is the previous frame's already-shaken translation).
+    pub last_shake_offset: Vec2,
+}
+
+/// A transient full-screen (or edge-vignette) color flash drawn over the game.
+#[derive(Debug, Clone, Copy)]
+pub struct ScreenFlash {
+    /// Flash RGB (alpha is animated by the fade).
+    pub color: bevy::color::Srgba,
+    /// Peak alpha at the start of the flash (0..1).
+    pub peak_alpha: f32,
+    /// Remaining flash time, seconds.
+    pub remaining: f32,
+    /// Total flash duration, seconds (for the fade fraction).
+    pub total: f32,
+    /// Render as an edge vignette (true) vs. a flat full-screen fill (false).
+    pub vignette: bool,
+}
+
+impl Juice {
+    /// Adds screen-shake trauma, clamped to 1.0.
+    pub fn add_trauma(&mut self, amount: f32) {
+        self.trauma = (self.trauma + amount).clamp(0.0, 1.0);
+    }
+
+    /// Triggers a hit-stop of at least `secs` (real seconds). Takes the max with
+    /// any in-progress hit-stop so a stronger event isn't cut short.
+    pub fn hitstop(&mut self, secs: f32) {
+        self.hitstop_remaining = self.hitstop_remaining.max(secs);
+    }
+
+    /// Starts a screen flash, overwriting any in-progress one.
+    pub fn flash(&mut self, color: bevy::color::Srgba, peak_alpha: f32, duration: f32, vignette: bool) {
+        self.flash = Some(ScreenFlash {
+            color,
+            peak_alpha,
+            remaining: duration,
+            total: duration,
+            vignette,
+        });
+    }
+}
+
+/// Wave 5 -- one-shot sound-effect request. Gameplay systems emit these; a
+/// single `play_sfx` system consumes them and plays a procedurally-synthesized
+/// blip (no asset files), so audio is fully decoupled from gameplay and
+/// wasm-safe. Distinct, short timbres per event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, bevy::prelude::Message)]
+pub enum SfxEvent {
+    MeleeSwing,
+    Hit,
+    EnemyDeath,
+    PlayerHurt,
+    Dash,
+    Pickup,
+    BoonSelect,
+    Explosion,
+    BossAttack,
+    FloorClear,
+}
+
 #[derive(Debug, Resource)]
 pub struct Floor(pub i64);
 

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::components::*;
 use crate::resources::*;
 use crate::systems::particle_system::spawn_particle;
-use crate::systems::projectile::{on_enemy_killed, KillRewards};
+use crate::systems::projectile::{kill_juice, on_enemy_killed, KillRewards};
 use crate::tuning;
 
 /// Mouse-aimed player attack, branching on the active weapon type (Wave 3).
@@ -33,6 +33,8 @@ pub fn player_attack(
     scale_factor: Res<ScaleFactor>,
     floor: Res<Floor>,
     mut rewards: KillRewards,
+    mut juice: ResMut<Juice>,
+    mut sfx: MessageWriter<SfxEvent>,
     player_stats: Res<PlayerStats>,
     active_weapon: Res<ActiveWeapon>,
     camera_query: Query<(&Camera, &GlobalTransform), With<CameraMarker>>,
@@ -80,6 +82,9 @@ pub fn player_attack(
     let scale = scale_factor.0;
     let knockback_impulse = player_stats.effective_knockback() * scale;
 
+    // Swing/fire whoosh on every attack (ranged uses the same airy cue).
+    sfx.write(SfxEvent::MeleeSwing);
+
     match active_weapon.weapon_type {
         WeaponType::Melee => melee_swing(
             &mut commands,
@@ -91,6 +96,8 @@ pub fn player_attack(
             &player_stats,
             &mut player_health,
             &mut rewards,
+            &mut juice,
+            &mut sfx,
             &mut enemy_query,
             &health_bars,
             floor.0,
@@ -112,6 +119,8 @@ pub fn player_attack(
             &player_stats,
             &mut player_health,
             &mut rewards,
+            &mut juice,
+            &mut sfx,
             &mut enemy_query,
             &health_bars,
             floor.0,
@@ -140,6 +149,8 @@ fn melee_swing(
     stats: &PlayerStats,
     player_health: &mut Health,
     rewards: &mut KillRewards,
+    juice: &mut Juice,
+    sfx: &mut MessageWriter<SfxEvent>,
     enemy_query: &mut Query<
         (Entity, &WorldPos, &mut Health, &mut Knockback, &Position, &EnemyType),
         (With<Enemy>, Without<Player>),
@@ -187,8 +198,10 @@ fn melee_swing(
             ParticleType::HitSpark,
             Vec3::new(enemy_world.0.x, enemy_world.0.y, 0.06),
         );
+        sfx.write(SfxEvent::Hit);
 
         if health.0 <= 0 {
+            kill_juice(juice, sfx, *enemy_type);
             on_enemy_killed(
                 commands,
                 entity,
@@ -271,6 +284,8 @@ fn aoe_burst(
     stats: &PlayerStats,
     player_health: &mut Health,
     rewards: &mut KillRewards,
+    juice: &mut Juice,
+    sfx: &mut MessageWriter<SfxEvent>,
     enemy_query: &mut Query<
         (Entity, &WorldPos, &mut Health, &mut Knockback, &Position, &EnemyType),
         (With<Enemy>, Without<Player>),
@@ -314,8 +329,10 @@ fn aoe_burst(
             ParticleType::HitSpark,
             Vec3::new(enemy_world.0.x, enemy_world.0.y, 0.06),
         );
+        sfx.write(SfxEvent::Hit);
 
         if health.0 <= 0 {
+            kill_juice(juice, sfx, *enemy_type);
             on_enemy_killed(
                 commands,
                 entity,

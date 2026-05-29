@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::*;
 use crate::resources::*;
+use crate::systems::particle_system::spawn_particle;
 use crate::tuning;
 use crate::utils::world_to_grid;
 
@@ -18,6 +19,7 @@ use crate::utils::world_to_grid;
 /// player translation flows through one collision check.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn move_player(
+    mut commands: Commands,
     mut query: Query<
         (
             &mut Position,
@@ -109,6 +111,17 @@ pub fn move_player(
         new_pos.y = candidate_y.y;
     }
     world_pos.0 = new_pos;
+
+    // Wave 5: leave an afterimage trail while dashing (a faint blue puff at the
+    // player's position each dash frame). Particles carry no actor markers, so
+    // they are excluded from collision/AI queries (B0001-safe).
+    if dash.dashing {
+        spawn_particle(
+            &mut commands,
+            ParticleType::DashTrail,
+            Vec3::new(new_pos.x, new_pos.y, 0.015),
+        );
+    }
 
     // Drive the visual transform from the continuous position.
     transform.translation.x = new_pos.x;

@@ -10,15 +10,20 @@ mod utils;
 
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+use resources::{Juice, SfxEvent};
 use state::GameState;
 use systems::*;
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins)
         .add_plugins(EguiPlugin::default())
         .init_state::<GameState>()
         .insert_resource(Time::<Fixed>::from_hz(30.0))
+        // Wave 5 juice + audio plumbing.
+        .init_resource::<Juice>()
+        .add_message::<SfxEvent>()
+        .add_systems(Startup, setup_sfx)
         .add_systems(Startup, setup)
         .add_systems(
             EguiPrimaryContextPass,
@@ -38,7 +43,11 @@ fn main() {
             EguiPrimaryContextPass,
             (hud, minimap, objective_arrow).run_if(in_state(GameState::Playing)),
         )
-        .add_systems(OnEnter(GameState::Playing), setup_play)
+        // Wave 5: the screen-flash overlay draws in every state (no-op when no
+        // flash is active) so the floor-transition fade reads across the
+        // BoonSelect -> Playing handoff and hurt/explosion flashes show in play.
+        .add_systems(EguiPrimaryContextPass, draw_screen_flash)
+        .add_systems(OnEnter(GameState::Playing), (setup_play, floor_transition_flash))
         // Real-time action core. Everything is delta-time driven and runs each
         // frame in Update. Explicit ordering keeps the read-after-write chains
         // correct (input -> movement -> combat -> cleanup -> win/lose checks)
@@ -73,9 +82,12 @@ fn main() {
                 // Resolve pending bomber/explosion AoE after the bomber fuse +
                 // any death-detonations are queued.
                 resolve_explosions.after(bomber_ai),
-                // Camera follows the post-move player position.
-                follow.after(move_player),
-                move_camera,
+                // Camera follows the post-move player position, then applies the
+                // Wave 5 screen-shake offset. `move_camera` (manual arrow-key
+                // pan) runs BEFORE follow so follow always applies the shake
+                // last, on top of the final anchor (avoids offset drift).
+                move_camera.after(move_player),
+                follow.after(move_player).after(move_camera),
             )
                 .run_if(in_state(GameState::Playing)),
         )
@@ -124,5 +136,24 @@ fn main() {
         .add_systems(OnEnter(GameState::Victory), on_victory)
         .add_systems(OnEnter(GameState::Defeat), on_defeat)
         .add_systems(Update, restart)
-        .run();
+        // Wave 5 juice/audio systems that run in EVERY state (not gated to
+        // Playing): the gesture gate must catch the menu click that unlocks
+        // browser audio; the hit-stop must reliably restore `Time<Virtual>`
+        // speed even across a state change; the flash timer + SFX pump run
+        // everywhere so the boon-pick / floor-clear cues and floor fade work.
+        .add_systems(
+            Update,
+            (
+                audio_gesture_gate,
+                play_sfx,
+                hit_stop,
+                update_screen_flash,
+            ),
+        );
+
+    // Register the procedural-audio asset type (requires the audio + asset
+    // plugins, added by DefaultPlugins above).
+    register_sfx_assets(&mut app);
+
+    app.run();
 }

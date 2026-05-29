@@ -7,6 +7,7 @@ use crate::systems::particle_system::spawn_particle;
 pub fn health(
     mut commands: Commands,
     mut healths: ResMut<Healths>,
+    mut sfx: MessageWriter<SfxEvent>,
     mut player_query: Query<(&Position, &mut Health, &Transform), With<Player>>,
     mut statistics: ResMut<Statistics>,
 ) {
@@ -15,8 +16,9 @@ pub fn health(
             health.0 += cached_health.health;
             statistics.health_collected += cached_health.health;
 
-            // Spawn health pickup particles
+            // Spawn health pickup particles + a pickup chime.
             spawn_particle(&mut commands, ParticleType::HealthPickup, transform.translation);
+            sfx.write(SfxEvent::Pickup);
 
             commands.entity(cached_health.entity).despawn();
         }
