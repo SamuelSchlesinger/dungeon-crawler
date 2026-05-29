@@ -28,12 +28,12 @@ pub fn follow(
     follow: Res<Follow>,
     mut floor: ResMut<Floor>,
     mut juice: ResMut<Juice>,
-    time: Res<Time>,
+    real_time: Res<Time<Real>>,
     player_query: Query<(&WorldPos, &Position), (With<Player>, Without<CameraMarker>)>,
     mut camera_query: Query<&mut Transform, (With<CameraMarker>, Without<Player>)>,
 ) {
     // Trauma decays on REAL time so a hit-stop doesn't freeze the shake.
-    let real_dt = time.delta_secs();
+    let real_dt = real_time.delta_secs();
     if juice.trauma > 0.0 {
         juice.trauma = (juice.trauma - tuning::SHAKE_DECAY_PER_SEC * real_dt).max(0.0);
     }
@@ -63,7 +63,7 @@ pub fn follow(
     let mut offset = Vec2::ZERO;
     if juice.trauma > 0.0001 {
         let amp = juice.trauma * juice.trauma * tuning::SHAKE_MAX_OFFSET;
-        let t_secs = time.elapsed_secs();
+        let t_secs = real_time.elapsed_secs();
         let phase = t_secs * tuning::SHAKE_FREQUENCY;
         // Mixed-frequency sines approximate band-limited noise without a PRNG.
         let nx = (phase).sin() * 0.6 + (phase * 2.13 + 1.7).sin() * 0.4;

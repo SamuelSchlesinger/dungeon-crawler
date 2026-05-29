@@ -13,7 +13,7 @@ pub fn victory(
     map: Res<Map>,
     player_query: Query<&Position, With<Player>>,
     enemy_query: Query<Entity, (With<Enemy>, Without<Player>)>,
-    statistics: Res<Statistics>,
+    mut statistics: ResMut<Statistics>,
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
     mut sfx: MessageWriter<crate::resources::SfxEvent>,
@@ -25,6 +25,9 @@ pub fn victory(
         sfx.write(crate::resources::SfxEvent::FloorClear);
         // Clearing this floor brings the cleared count to floors_completed + 1.
         if statistics.floors_completed + 1 >= RUN_FLOOR_CAP {
+            // Count the final cleared floor (next_floor is never entered on a win,
+            // so without this the Victory screen shows one fewer floor than cleared).
+            statistics.floors_completed += 1;
             next_state.set(GameState::Victory);
         } else {
             // Offer a boon (and the shop) BEFORE generating the next floor. The
