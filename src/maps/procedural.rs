@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use crate::{
     components::{EnemyType, Position},
     map::{Enemy, Health, Map, Room, Tile, VictoryCondition},
+    tuning,
 };
 
 // Sprite indices reused from the hand-authored maps (see unbeatable.rs / avoidance.rs).
@@ -10,6 +11,11 @@ const FLOOR_SPRITE: u64 = 960; // passable floor
 const WALL_SPRITE: u64 = 15 * 64 - 13; // 947, impassable wall
 const HEALTH_SPRITE: u64 = 64 * 23 + 45; // 1517, health pickup
 const PLAYER_SPRITE: u64 = 31 * 64 + 20; // 2004
+/// Hazard tiles are PASSABLE (so they never block the only path) but are tagged
+/// with a `Hazard` component + distinct tint at spawn. `setup_play` recognizes a
+/// tile as a hazard by this sprite index. The DoT comes from the component, not
+/// the tile passability, so hazards never block solvability.
+pub const HAZARD_SPRITE: u64 = 64 * 7 + 1; // 449, a distinct glyph for lava/spikes
 
 const GRID: i64 = 60;
 const Z: i64 = 0;
@@ -170,12 +176,138 @@ pub fn procedural() -> Map {
         );
     }
 
+    // Scatter a few hazard patches. Hazards are PASSABLE tiles (they replace the
+    // floor sprite but stay walkable), so they never block the only path -- the
+    // level stays solvable. We only place them inside ROOM interiors (never on
+    // start/victory tiles), so corridors -- the connectivity spine -- are always
+    // hazard-free, leaving an obvious clean route.
+    scatter_hazards(&mut room, &rooms, start, victory_position);
+
     Map {
         player_health: compute_reasonable_player_health(total_enemy_hp),
         player_strength: compute_reasonable_player_strength(total_enemy_hp),
         room,
         player_sprite: PLAYER_SPRITE,
         victory_condition: VictoryCondition::Arrival(victory_position),
+    }
+}
+
+/// Scatters `HAZARD_PATCH_COUNT` small hazard patches inside room interiors,
+/// overwriting the floor tile sprite with `HAZARD_SPRITE` (still passable). Skips
+/// the start and victory tiles. Because hazards remain walkable, the level is
+/// always solvable regardless of placement.
+fn scatter_hazards(room: &mut Room, rooms: &[Rect], start: Position, victory: Position) {
+    if rooms.len() < 2 {
+        return;
+    }
+    for _ in 0..tuning::HAZARD_PATCH_COUNT {
+        // Choose a non-start room interior cell as the patch origin.
+        let r = rooms[rand::random_range(1..rooms.len())];
+        let ox = r.x + rand::random_range(0..r.w);
+        let oy = r.y + rand::random_range(0..r.h);
+        let patch_size = rand::random_range(1..=tuning::HAZARD_PATCH_MAX_TILES);
+        for i in 0..patch_size {
+            // Grow the patch as a short horizontal/vertical run within the room.
+            let (dx, dy) = if i % 2 == 0 { (i as i64 / 2, 0) } else { (0, i as i64 / 2 + 1) };
+            let hx = ox + dx;
+            let hy = oy + dy;
+            // Keep the patch inside this room's bounds.
+            if hx < r.x || hx >= r.x + r.w || hy < r.y || hy >= r.y + r.h {
+                continue;
+            }
+            let pos = Position::new(hx, hy, Z);
+            if pos == start || pos == victory {
+                continue;
+            }
+            // Only convert tiles that are floor (inside the room).
+            room.add_tile(pos, Tile::new(HAZARD_SPRITE, true));
+        }
+    }
+}
+
+/// Generates a BOSS arena: one large open room with a single high-HP boss in the
+/// center, plus a couple of weak adds. Victory is Extermination (kill the boss
+/// and every add). Triggered on boss floors by `next_floor`.
+pub fn boss_floor() -> Map {
+    // A single large open arena, centered in the grid.
+    let arena = Rect { x: 14, y: 14, w: 30, h: 30 };
+    let start = Position::new(arena.x + arena.w / 2, arena.y + 2, Z);
+
+    let mut floor_tiles: BTreeSet<Position> = BTreeSet::new();
+    for dx in 0..arena.w {
+        for dy in 0..arena.h {
+            floor_tiles.insert(Position::new(arena.x + dx, arena.y + dy, Z));
+        }
+    }
+
+    let mut room = Room::new(start);
+    for pos in &floor_tiles {
+        room.add_tile(*pos, Tile::new(FLOOR_SPRITE, true));
+    }
+    // Solid wall border.
+    let mut wall_positions: BTreeSet<Position> = BTreeSet::new();
+    for pos in &floor_tiles {
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                let neighbor = Position::new(pos.x + dx, pos.y + dy, Z);
+                if !floor_tiles.contains(&neighbor) {
+                    wall_positions.insert(neighbor);
+                }
+            }
+        }
+    }
+    for pos in &wall_positions {
+        room.add_tile(*pos, Tile::new(WALL_SPRITE, false));
+    }
+
+    // The boss in the arena center. setup_play recomputes its scaled stats from
+    // EnemyType::Boss; the stored health here is a placeholder. A large wake zone
+    // ensures it engages as soon as the player enters.
+    let boss_type = EnemyType::Boss;
+    let (boss_hp, boss_str) = boss_type.get_stats(0);
+    let boss_pos = Position::new(arena.x + arena.w / 2, arena.y + arena.h / 2, Z);
+    room.add_enemy(
+        boss_pos,
+        Enemy::new(
+            boss_type.sprite_index() as u64,
+            boss_hp.max(1) as u64,
+            boss_str.max(1) as u64,
+            Enemy::circular_wake_zone(boss_pos, 30),
+        ),
+    );
+
+    // A couple of weak adds flanking the boss.
+    for (ax, ay) in [(-4i64, 2i64), (4, 2)] {
+        let add_type = EnemyType::Skeleton;
+        let (hp, st) = add_type.get_stats(0);
+        let pos = Position::new(boss_pos.x + ax, boss_pos.y + ay, Z);
+        room.add_enemy(
+            pos,
+            Enemy::new(
+                add_type.sprite_index() as u64,
+                hp.max(1) as u64,
+                st.max(1) as u64,
+                Enemy::circular_wake_zone(boss_pos, 30),
+            ),
+        );
+    }
+
+    // A health pickup tucked in a corner to reward aggressive play.
+    room.add_health(
+        Position::new(arena.x + 2, arena.y + arena.h - 3, Z),
+        Health {
+            sprite_index: HEALTH_SPRITE,
+            health: 80,
+        },
+    );
+
+    Map {
+        // Boss floors get a generous player HP pool (boss fights are long).
+        player_health: 220,
+        player_strength: 14,
+        room,
+        player_sprite: PLAYER_SPRITE,
+        victory_condition: VictoryCondition::Extermination,
     }
 }
 
