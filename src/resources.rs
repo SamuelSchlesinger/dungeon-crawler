@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::components::Position;
+use crate::components::{Position, WeaponType};
+use crate::tuning;
 
 use bevy::prelude::*;
 
@@ -125,6 +126,151 @@ pub struct ObjectiveMarker(pub Option<Position>);
 pub struct CarryOver {
     pub health: i64,
     pub strength: i64,
+}
+
+/// Central player stat block (Wave 3). Stores base values (seeded from tuning at
+/// run start) plus accumulated boon MODIFIERS. The `effective_*` helpers combine
+/// base × modifier so combat/movement/dash systems read one source of truth.
+///
+/// This is the resource boons mutate. It persists across floors (it is NOT torn
+/// down by floor transitions), so a run's build accumulates.
+#[derive(Debug, Resource, Clone)]
+pub struct PlayerStats {
+    // --- bases (seeded from tuning at run start) ---
+    pub base_max_hp: i64,
+    pub base_move_speed: f32,
+    pub base_dash_cooldown: f32,
+    pub base_attack_range: f32,
+    pub base_attack_half_angle: f32,
+    pub base_attack_knockback: f32,
+
+    // --- boon-driven modifiers ---
+    /// Multiplier on outgoing damage (1.0 == base). +25% boon adds 0.25.
+    pub damage_mult: f32,
+    /// Flat bonus max HP added by boons.
+    pub bonus_max_hp: i64,
+    /// Fractional reduction of attack cooldown (0.0 == none, capped < 1).
+    pub attack_cooldown_reduction: f32,
+    /// Multiplier on move speed.
+    pub move_speed_mult: f32,
+    /// Fractional reduction of dash cooldown.
+    pub dash_cooldown_reduction: f32,
+    /// Multiplier on attack range.
+    pub attack_range_mult: f32,
+    /// Extra radians added to the melee cone half-angle.
+    pub attack_arc_bonus: f32,
+    /// Multiplier on knockback.
+    pub knockback_mult: f32,
+    /// Crit chance (0.0..1.0). A crit deals `CRIT_MULTIPLIER`x damage.
+    pub crit_chance: f32,
+    /// Lifesteal fraction of damage dealt healed back.
+    pub lifesteal: f32,
+    /// Extra projectiles fired by the ranged weapon (0 == single shot).
+    pub extra_projectiles: i64,
+    /// Thorns: fraction of incoming damage reflected to the attacker.
+    pub thorns: f32,
+}
+
+impl Default for PlayerStats {
+    fn default() -> Self {
+        PlayerStats {
+            base_max_hp: 0, // set from the map's player_health in setup_play
+            base_move_speed: tuning::PLAYER_SPEED_TILES,
+            base_dash_cooldown: tuning::DASH_COOLDOWN,
+            base_attack_range: tuning::ATTACK_RANGE_TILES,
+            base_attack_half_angle: tuning::ATTACK_HALF_ANGLE,
+            base_attack_knockback: tuning::ATTACK_KNOCKBACK_TILES,
+
+            damage_mult: 1.0,
+            bonus_max_hp: 0,
+            attack_cooldown_reduction: 0.0,
+            move_speed_mult: 1.0,
+            dash_cooldown_reduction: 0.0,
+            attack_range_mult: 1.0,
+            attack_arc_bonus: 0.0,
+            knockback_mult: 1.0,
+            crit_chance: 0.0,
+            lifesteal: 0.0,
+            extra_projectiles: 0,
+            thorns: 0.0,
+        }
+    }
+}
+
+impl PlayerStats {
+    /// Effective max HP = base + boon bonuses.
+    pub fn effective_max_hp(&self) -> i64 {
+        self.base_max_hp + self.bonus_max_hp
+    }
+    /// Effective move speed in tiles/sec.
+    pub fn effective_move_speed(&self) -> f32 {
+        self.base_move_speed * self.move_speed_mult
+    }
+    /// Effective dash cooldown in seconds.
+    pub fn effective_dash_cooldown(&self) -> f32 {
+        (self.base_dash_cooldown * (1.0 - self.dash_cooldown_reduction)).max(0.05)
+    }
+    /// Effective melee/attack range in tiles.
+    pub fn effective_attack_range(&self) -> f32 {
+        self.base_attack_range * self.attack_range_mult
+    }
+    /// Effective melee cone half-angle in radians.
+    pub fn effective_attack_half_angle(&self) -> f32 {
+        self.base_attack_half_angle + self.attack_arc_bonus
+    }
+    /// Effective knockback impulse in tiles/sec.
+    pub fn effective_knockback(&self) -> f32 {
+        self.base_attack_knockback * self.knockback_mult
+    }
+    /// Effective attack cooldown (seconds) for a weapon type, applying the
+    /// player's cooldown-reduction boon to that weapon's base cooldown.
+    pub fn effective_attack_cooldown(&self, weapon_type: WeaponType) -> f32 {
+        (weapon_type.base_cooldown() * (1.0 - self.attack_cooldown_reduction)).max(0.05)
+    }
+    /// Rolls one attack's damage from a base strength value, applying the damage
+    /// multiplier and a crit roll. Returns `(damage, was_crit)`.
+    pub fn roll_damage(&self, base_strength: i64) -> (i64, bool) {
+        let crit = rand::random::<f32>() < self.crit_chance;
+        let mut dmg = base_strength as f32 * self.damage_mult;
+        if crit {
+            dmg *= tuning::CRIT_MULTIPLIER;
+        }
+        (dmg.round().max(1.0) as i64, crit)
+    }
+}
+
+/// The player's currently-equipped weapon (Wave 3). Persists across floors like
+/// `PlayerStats`. Picking up a weapon drop swaps this out, changing the attack
+/// style. Starts as a plain Melee weapon at run start.
+#[derive(Debug, Resource, Clone)]
+pub struct ActiveWeapon {
+    pub weapon_type: WeaponType,
+    pub name: &'static str,
+}
+
+impl Default for ActiveWeapon {
+    fn default() -> Self {
+        ActiveWeapon {
+            weapon_type: WeaponType::Melee,
+            name: "Fists",
+        }
+    }
+}
+
+/// The player's gold (Wave 3). Earned by killing enemies, spent on the boon
+/// screen (reroll / heal). Persists across floors within a run.
+#[derive(Debug, Resource, Clone, Copy, Default)]
+pub struct Gold(pub i64);
+
+/// Names of boons the player has acquired this run, for HUD display.
+#[derive(Debug, Resource, Clone, Default)]
+pub struct AcquiredBoons(pub Vec<&'static str>);
+
+/// The three boons currently offered on the BoonSelect screen, plus whether a
+/// reroll has happened. Rebuilt each time BoonSelect is entered.
+#[derive(Debug, Resource, Clone, Default)]
+pub struct BoonOffer {
+    pub choices: Vec<crate::systems::boons::Boon>,
 }
 
 #[derive(Debug, Resource, Clone)]

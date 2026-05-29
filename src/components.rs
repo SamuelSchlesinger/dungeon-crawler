@@ -138,30 +138,73 @@ pub struct HealthGain;
 #[derive(Component)]
 pub struct WeaponDrop;
 
-/// Stats granted by a weapon pickup. Names come from a small fixed table.
+/// How a weapon changes the player's attack behavior (Wave 3 build variety).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WeaponType {
+    /// Aimed melee cone toward the cursor (the Wave 1 baseline).
+    Melee,
+    /// Fires a projectile (or a spread when the projectile-count boon is held)
+    /// toward the cursor; the projectile damages the first enemy it hits.
+    Ranged,
+    /// Radial burst around the player that damages + knocks back all enemies in
+    /// `AOE_RADIUS_TILES`, on a longer cooldown.
+    Aoe,
+}
+
+impl WeaponType {
+    /// Short label shown in the HUD.
+    pub fn label(&self) -> &'static str {
+        match self {
+            WeaponType::Melee => "Melee",
+            WeaponType::Ranged => "Ranged",
+            WeaponType::Aoe => "AoE",
+        }
+    }
+
+    /// Base attack cooldown (seconds) for this weapon type, before the
+    /// player's attack-cooldown modifier is applied.
+    pub fn base_cooldown(&self) -> f32 {
+        match self {
+            WeaponType::Melee => crate::tuning::ATTACK_COOLDOWN,
+            WeaponType::Ranged => crate::tuning::RANGED_COOLDOWN,
+            WeaponType::Aoe => crate::tuning::AOE_COOLDOWN,
+        }
+    }
+}
+
+/// Stats granted by a weapon pickup. Names come from a small fixed table, and
+/// each weapon carries a `WeaponType` that dictates its attack behavior.
 #[derive(Component, Debug, Clone)]
 pub struct WeaponStats {
     pub strength_bonus: i64,
     pub name: &'static str,
+    pub weapon_type: WeaponType,
 }
 
 /// Fixed table of weapons that can drop from enemies. The sprite index reuses an
 /// existing tilesheet icon (a sword-like glyph) so no new assets are required.
-pub const WEAPON_TABLE: &[(&str, i64)] = &[
-    ("Rusty Dagger", 1),
-    ("Iron Sword", 2),
-    ("Steel Mace", 3),
-    ("War Axe", 4),
-    ("Enchanted Blade", 6),
+/// Each entry: (name, strength_bonus, weapon_type).
+pub const WEAPON_TABLE: &[(&str, i64, WeaponType)] = &[
+    ("Rusty Dagger", 1, WeaponType::Melee),
+    ("Iron Sword", 2, WeaponType::Melee),
+    ("Steel Mace", 3, WeaponType::Melee),
+    ("War Axe", 4, WeaponType::Aoe),
+    ("Enchanted Blade", 6, WeaponType::Melee),
+    ("Short Bow", 2, WeaponType::Ranged),
+    ("Hunter's Crossbow", 4, WeaponType::Ranged),
+    ("Frost Wand", 3, WeaponType::Ranged),
+    ("Thunder Hammer", 5, WeaponType::Aoe),
 ];
 
 impl WeaponStats {
     /// Pick a random weapon from the fixed table.
     pub fn random() -> Self {
-        let (name, strength_bonus) = WEAPON_TABLE[rand::random_range(0..WEAPON_TABLE.len())];
+        let (name, strength_bonus, weapon_type) =
+            WEAPON_TABLE[rand::random_range(0..WEAPON_TABLE.len())];
         WeaponStats {
             strength_bonus,
             name,
+            weapon_type,
         }
     }
 }
@@ -244,6 +287,23 @@ pub struct RepathTimer(pub Timer);
 /// its own lifetime timer and is despawned when it expires or on floor teardown.
 #[derive(Component, Debug)]
 pub struct TransientVisual(pub Timer);
+
+/// A player-fired ranged projectile (Wave 3). Travels in `velocity` until it
+/// hits an enemy, hits a wall, or exceeds its remaining travel distance, then
+/// despawns. Carries the (already crit-rolled) damage and knockback to apply.
+#[derive(Component, Debug)]
+pub struct Projectile {
+    /// World-units/sec travel velocity.
+    pub velocity: Vec2,
+    /// Remaining world-unit distance before the projectile fizzles out.
+    pub remaining: f32,
+    /// Damage applied to the first enemy hit.
+    pub damage: i64,
+    /// Knockback impulse (world units/sec) applied to the enemy hit.
+    pub knockback: f32,
+    /// Whether this shot rolled a critical hit (for damage-number coloring).
+    pub crit: bool,
+}
 
 /// A short-lived floating damage number (Text2d in world space) that rises and
 /// fades, then despawns. Spawned wherever damage is applied.

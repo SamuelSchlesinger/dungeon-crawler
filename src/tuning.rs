@@ -158,3 +158,96 @@ pub fn enemy_visual(enemy_type: crate::components::EnemyType) -> (bevy::prelude:
         Ghost => (Color::srgba(0.55, 0.75, 1.0, 0.62), 0.95),
     }
 }
+
+// ----------------------------------------------------------------------------
+// Gold / economy (Wave 3)
+// ----------------------------------------------------------------------------
+
+/// Base gold awarded per enemy kill (before per-type and floor scaling).
+pub const GOLD_PER_KILL_BASE: i64 = 5;
+
+/// Extra gold per cleared floor added to each kill reward (depth bonus).
+pub const GOLD_PER_KILL_FLOOR_BONUS: i64 = 2;
+
+/// Base cost (floor 1) to reroll the three offered boons. Scales with floor.
+pub const SHOP_REROLL_BASE_COST: i64 = 15;
+
+/// Added to the reroll cost per cleared floor.
+pub const SHOP_REROLL_FLOOR_COST: i64 = 5;
+
+/// Base cost (floor 1) to fully heal the player on the boon screen. Scales.
+pub const SHOP_HEAL_BASE_COST: i64 = 25;
+
+/// Added to the heal cost per cleared floor.
+pub const SHOP_HEAL_FLOOR_COST: i64 = 10;
+
+/// Reroll cost for a given run depth (floors cleared).
+pub fn reroll_cost(floor: i64) -> i64 {
+    SHOP_REROLL_BASE_COST + SHOP_REROLL_FLOOR_COST * floor.max(0)
+}
+
+/// Full-heal cost for a given run depth (floors cleared).
+pub fn heal_cost(floor: i64) -> i64 {
+    SHOP_HEAL_BASE_COST + SHOP_HEAL_FLOOR_COST * floor.max(0)
+}
+
+// ----------------------------------------------------------------------------
+// Boon magnitudes (Wave 3) -- see systems::boons for the pool definition.
+// ----------------------------------------------------------------------------
+
+/// +damage boon: multiplier added to the damage multiplier (0.25 == +25%).
+pub const BOON_DAMAGE: f32 = 0.25;
+/// +max HP boon: flat HP added (and healed) when picked.
+pub const BOON_MAX_HP: i64 = 20;
+/// Attack-cooldown boon: fraction the cooldown is reduced by (0.20 == -20%).
+pub const BOON_ATTACK_COOLDOWN: f32 = 0.20;
+/// +move-speed boon: multiplier added to the move-speed multiplier.
+pub const BOON_MOVE_SPEED: f32 = 0.20;
+/// +1 projectile boon: extra projectiles added per ranged shot.
+pub const BOON_PROJECTILE: i64 = 1;
+/// Lifesteal boon: fraction of damage dealt healed back.
+pub const BOON_LIFESTEAL: f32 = 0.10;
+/// Dash-cooldown boon: fraction the dash cooldown is reduced by.
+pub const BOON_DASH_COOLDOWN: f32 = 0.35;
+/// +attack-range boon: multiplier added to the attack-range multiplier.
+pub const BOON_ATTACK_RANGE: f32 = 0.40;
+/// +knockback boon: multiplier added to the knockback multiplier.
+pub const BOON_KNOCKBACK: f32 = 0.50;
+/// Crit-chance boon: chance added (0.15 == +15%). A crit deals double damage.
+pub const BOON_CRIT: f32 = 0.15;
+/// Thorns boon: fraction of incoming damage reflected back to the attacker.
+pub const BOON_THORNS: f32 = 0.50;
+/// +attack-arc boon: radians added to the melee cone half-angle.
+pub const BOON_ATTACK_ARC: f32 = PI / 9.0; // +20 degrees
+
+/// Crit damage multiplier applied when an attack rolls a critical hit.
+pub const CRIT_MULTIPLIER: f32 = 2.0;
+
+// ----------------------------------------------------------------------------
+// Weapon types / projectiles (Wave 3)
+// ----------------------------------------------------------------------------
+
+/// Speed of a ranged projectile, in tiles per second.
+pub const PROJECTILE_SPEED_TILES: f32 = 14.0;
+
+/// Maximum distance a projectile travels (tiles) before despawning.
+pub const PROJECTILE_RANGE_TILES: f32 = 9.0;
+
+/// Collision radius of a projectile vs. an enemy, in tiles.
+pub const PROJECTILE_HIT_RADIUS_TILES: f32 = 0.5;
+
+/// Angular spread (radians) between extra projectiles when the projectile-count
+/// boon fires more than one shot.
+pub const PROJECTILE_SPREAD: f32 = PI / 12.0; // 15 degrees
+
+/// Radius of the AoE weapon's radial burst, in tiles.
+pub const AOE_RADIUS_TILES: f32 = 2.8;
+
+/// Cooldown of the AoE weapon, in seconds (longer than melee/ranged).
+pub const AOE_COOLDOWN: f32 = 0.9;
+
+/// Cooldown of the ranged weapon, in seconds.
+pub const RANGED_COOLDOWN: f32 = 0.45;
+
+/// Knockback applied by the AoE burst, in tiles/sec.
+pub const AOE_KNOCKBACK_TILES: f32 = 12.0;
