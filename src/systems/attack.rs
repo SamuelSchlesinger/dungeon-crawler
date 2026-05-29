@@ -86,6 +86,14 @@ pub fn player_attack(
         health.0 -= strength.0;
         statistics.damage_dealt += strength.0;
 
+        // Floating damage number above the enemy.
+        crate::systems::damage_numbers::spawn_damage_number(
+            &mut commands,
+            enemy_world.0,
+            strength.0,
+            crate::systems::damage_numbers::DAMAGE_TO_ENEMY,
+        );
+
         // Knockback away from the player.
         let push = if dir == Vec2::ZERO { aim } else { dir };
         knockback.0 += push * tuning::ATTACK_KNOCKBACK_TILES * scale;
