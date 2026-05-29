@@ -64,11 +64,28 @@ pub fn setup(
                 },
                 Menu,
             ));
+        commands
+            .spawn((
+                Text::new("Press p for procedural (roguelike)"),
+                TextFont {
+                    font: asset_server.load("fonts/FreeMono.ttf"),
+                    font_size: 80.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.0, 1.0, 0.0)),
+                Node {
+                    position_type: PositionType::Absolute,
+                    bottom: Val::Px(window.height() - 400.),
+                    left: Val::Px(100.),
+                    ..default()
+                },
+                Menu,
+            ));
 
         // Controls explanation
         commands
             .spawn((
-                Text::new("Controls: WASD=Move  Mouse=Target Enemy  Click=Attack  V=Avoidance"),
+                Text::new("Controls: WASD=Move  Mouse=Target Enemy  P=Procedural  V=Avoidance  R=Restart"),
                 TextFont {
                     font: asset_server.load("fonts/FreeMono.ttf"),
                     font_size: 40.0,

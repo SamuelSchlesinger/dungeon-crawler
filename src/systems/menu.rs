@@ -16,6 +16,9 @@ pub fn menu(
         } else if keyboard_input.just_pressed(KeyCode::KeyV) {
             *map = maps::avoidance();
             next_state.set(GameState::Playing);
+        } else if keyboard_input.just_pressed(KeyCode::KeyP) {
+            *map = maps::procedural();
+            next_state.set(GameState::Playing);
         }
         for mut visibility in query.iter_mut() {
             *visibility = Visibility::Visible;
