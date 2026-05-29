@@ -12,9 +12,19 @@ use crate::state::GameState;
 #[allow(clippy::type_complexity)]
 pub fn next_floor(
     mut commands: Commands,
-    // All positioned (grid) entities plus enemy health bars. The camera has no
-    // Position component, so it survives this cleanup (mirrors on_victory).
-    entities: Query<Entity, Or<(With<Position>, With<HealthBar>)>>,
+    // All positioned (grid) entities, health bars, and transient world visuals
+    // (damage numbers, particles, swing arcs). The camera has no Position
+    // component, so it survives this cleanup (mirrors on_victory).
+    entities: Query<
+        Entity,
+        Or<(
+            With<Position>,
+            With<HealthBar>,
+            With<DamageNumber>,
+            With<Particle>,
+            With<TransientVisual>,
+        )>,
+    >,
     player_query: Query<(&Health, &Strength), With<Player>>,
     mut statistics: ResMut<Statistics>,
     mut next_state: ResMut<NextState<GameState>>,

@@ -2,9 +2,33 @@ use bevy::prelude::*;
 
 use crate::components::*;
 use crate::map;
+use crate::map::VictoryCondition;
 use crate::resources::*;
 use crate::tuning;
 use crate::utils::grid_to_world_center;
+
+/// Collects every `Arrival` target position in a (possibly nested) victory
+/// condition tree. Returns an empty vec for Extermination / Unwinnable maps.
+fn collect_arrival_targets(vc: &VictoryCondition, out: &mut Vec<Position>) {
+    match vc {
+        VictoryCondition::Arrival(p) => out.push(*p),
+        VictoryCondition::And(cs) | VictoryCondition::Or(cs) => {
+            for c in cs {
+                collect_arrival_targets(c, out);
+            }
+        }
+        VictoryCondition::Extermination | VictoryCondition::Unwinnable => {}
+    }
+}
+
+/// The exit/objective tile to highlight for this map, if any. Picks the first
+/// `Arrival` target; `None` for Extermination-only maps so callers skip the
+/// exit highlight / arrow gracefully.
+fn arrival_target(vc: &VictoryCondition) -> Option<Position> {
+    let mut targets = Vec::new();
+    collect_arrival_targets(vc, &mut targets);
+    targets.into_iter().next()
+}
 
 const INITIAL_SCALE_FACTOR: f32 = 50.;
 
@@ -54,6 +78,7 @@ pub fn initialize_resources(
     commands.insert_resource(WeaponDrops::new());
     commands.insert_resource(Revealed::new());
     commands.insert_resource(VisibleTiles::new());
+    commands.insert_resource(ObjectiveMarker::default());
     commands.insert_resource(map.clone());
     create_camera(&mut commands, initial_position);
     commands.insert_resource(SpriteTexture(tiles_texture_handle.clone()));
@@ -130,6 +155,11 @@ pub fn setup_play(
 
     let room = test_map.room.clone();
 
+    // Resolve the (optional) exit/objective tile so we can highlight it and feed
+    // the on-screen arrow. Extermination-only maps have no arrival tile.
+    let exit_position = arrival_target(&test_map.victory_condition);
+    commands.insert_resource(ObjectiveMarker(exit_position));
+
     if let Some(mut transform) = camera.iter_mut().next() {
         transform.translation = Vec3::new(
             room.initial_position.x as f32 * scale_factor.0,
@@ -143,36 +173,51 @@ pub fn setup_play(
     floor.0 = room.initial_position.z;
 
     for (Position { x, y, z }, tile) in (&room.tiles).into_iter() {
-        let entity = commands
-            .spawn((
-                Sprite::from_atlas_image(
-                    tiles_texture_image.clone(),
-                    TextureAtlas {
-                        layout: tiles_texture_layout.clone(),
-                        index: tile.sprite_index as usize,
-                    },
-                ),
-                Transform::from_xyz(
-                    (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                    (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
-                    0.,
-                ),
-                if *z == initial_position.z {
-                    Visibility::Visible
-                } else {
-                    Visibility::Hidden
-                },
-                Position {
-                    x: *x,
-                    y: *y,
-                    z: *z,
-                },
-                Passable(tile.passable),
-                Tile,
-                SpriteIndex(tile.sprite_index as usize),
-                ZLevel(0.),
-            ))
-            .id();
+        let tile_pos = Position {
+            x: *x,
+            y: *y,
+            z: *z,
+        };
+        let is_exit = exit_position == Some(tile_pos);
+        // The exit tile gets a distinct gold tint so it stands out once revealed.
+        let base_color = if is_exit {
+            Color::srgb(1.0, 0.85, 0.2)
+        } else {
+            Color::WHITE
+        };
+
+        let mut sprite = Sprite::from_atlas_image(
+            tiles_texture_image.clone(),
+            TextureAtlas {
+                layout: tiles_texture_layout.clone(),
+                index: tile.sprite_index as usize,
+            },
+        );
+        sprite.color = base_color;
+
+        let mut tile_cmd = commands.spawn((
+            sprite,
+            Transform::from_xyz(
+                (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
+                0.,
+            ),
+            if *z == initial_position.z {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            },
+            tile_pos,
+            Passable(tile.passable),
+            Tile,
+            TileBaseColor(base_color),
+            SpriteIndex(tile.sprite_index as usize),
+            ZLevel(0.),
+        ));
+        if is_exit {
+            tile_cmd.insert(ExitMarker);
+        }
+        let entity = tile_cmd.id();
         tiles.insert(
             Position {
                 x: *x,
@@ -192,8 +237,15 @@ pub fn setup_play(
         let (health, strength) = enemy_type.get_stats(run_depth);
         let sprite_idx = enemy_type.sprite_index();
 
+        // Distinct per-type tint + sprite scale so types read at a glance.
+        let (tint, scale_mult) = tuning::enemy_visual(enemy_type);
+        let mut enemy_sprite =
+            actor_sprite(&tiles_texture_image, &tiles_texture_layout, sprite_idx);
+        enemy_sprite.color = tint;
+        enemy_sprite.custom_size = Some(Vec2::splat(INITIAL_SCALE_FACTOR * scale_mult));
+
         let mut enemy_entity = commands.spawn((
-            actor_sprite(&tiles_texture_image, &tiles_texture_layout, sprite_idx),
+            enemy_sprite,
             Transform::from_xyz(
                 (*x as f32 - 0.5) * INITIAL_SCALE_FACTOR,
                 (*y as f32 - 0.5) * INITIAL_SCALE_FACTOR,
@@ -223,6 +275,7 @@ pub fn setup_play(
         enemy_entity.insert((
             enemy_type,
             AIBehavior::for_enemy_type(enemy_type),
+            ActorBaseColor(tint),
             MovementPath { path: None },
             SpriteIndex(sprite_idx),
             ZLevel(0.01),
@@ -342,6 +395,7 @@ pub fn setup_play(
         Strength(player_strength),
         Passable(false),
         SpriteIndex(test_map.player_sprite as usize),
+        ActorBaseColor(Color::WHITE),
         ZLevel(0.02),
     ));
     // Real-time action components for the player (split into a second insert to

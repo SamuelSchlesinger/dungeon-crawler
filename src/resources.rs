@@ -112,6 +112,12 @@ impl VisibleTiles {
     }
 }
 
+/// The objective / exit tile for the current map, if the victory condition has
+/// an arrival target. `None` for Extermination-only maps (the on-screen arrow
+/// and exit highlight are skipped). Set by `setup_play`.
+#[derive(Debug, Resource, Clone, Copy, Default)]
+pub struct ObjectiveMarker(pub Option<Position>);
+
 /// Player stats carried across floors during a multi-floor roguelike run.
 /// When present, `setup_play` uses these instead of the map's defaults so the
 /// player keeps their current health and accumulated strength between floors.

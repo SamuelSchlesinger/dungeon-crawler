@@ -73,6 +73,14 @@ pub fn enemy_attack(
                     player_health.0 -= strength.0;
                     statistics.damage_taken += strength.0;
 
+                    // Floating damage number above the player.
+                    crate::systems::damage_numbers::spawn_damage_number(
+                        &mut commands,
+                        player_world.0,
+                        strength.0,
+                        crate::systems::damage_numbers::DAMAGE_TO_PLAYER,
+                    );
+
                     let push = (player_world.0 - enemy_world.0).normalize_or_zero();
                     if push != Vec2::ZERO {
                         player_knockback.0 += push * tuning::ENEMY_KNOCKBACK_TILES * scale;

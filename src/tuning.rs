@@ -103,3 +103,58 @@ pub fn enemy_speed_tiles(enemy_type: crate::components::EnemyType) -> f32 {
         Ghost => 2.2,    // slow, tanky / keeps distance
     }
 }
+
+// ----------------------------------------------------------------------------
+// Fog of war / line-of-sight (Wave 2)
+// ----------------------------------------------------------------------------
+
+/// How far the player can see, in tiles (Euclidean radius). Tiles within this
+/// radius AND not blocked by an opaque wall are in current line of sight.
+/// Smaller values make the fog tighter / more claustrophobic.
+pub const FOG_RADIUS: i64 = 6;
+
+/// Tint multiplier applied to tiles that have been explored but are NOT currently
+/// in line of sight (the "remembered but dark" tier). 1.0 == full brightness.
+pub const FOG_DIM_FACTOR: f32 = 0.45;
+
+// ----------------------------------------------------------------------------
+// Minimap (Wave 2)
+// ----------------------------------------------------------------------------
+
+/// Pixel size of a single tile cell drawn on the egui minimap overlay. Larger
+/// values make the minimap bigger (it auto-fits the explored bounds).
+pub const MINIMAP_CELL_SIZE: f32 = 3.0;
+
+/// Maximum on-screen width/height of the minimap panel, in pixels. The minimap
+/// scales its cell size down to stay within this box on large floors.
+pub const MINIMAP_MAX_SIZE: f32 = 200.0;
+
+// ----------------------------------------------------------------------------
+// Floating damage numbers (Wave 2)
+// ----------------------------------------------------------------------------
+
+/// How long a floating damage number stays on screen before despawning, seconds.
+pub const DAMAGE_NUMBER_LIFETIME: f32 = 0.7;
+
+/// How fast a floating damage number rises, in tiles per second.
+pub const DAMAGE_NUMBER_RISE_TILES: f32 = 1.5;
+
+// ----------------------------------------------------------------------------
+// Enemy visuals (Wave 2)
+// ----------------------------------------------------------------------------
+
+/// Per-enemy-type sprite tint and scale so the three types read at a glance.
+/// Returns `(color, scale_multiplier)`. Scale multiplies the base actor sprite
+/// size set at spawn.
+pub fn enemy_visual(enemy_type: crate::components::EnemyType) -> (bevy::prelude::Color, f32) {
+    use bevy::prelude::Color;
+    use crate::components::EnemyType::*;
+    match enemy_type {
+        // Pale bone-white, small.
+        Skeleton => (Color::srgb(0.90, 0.90, 0.80), 0.78),
+        // Sickly green, large and bulky.
+        Orc => (Color::srgb(0.45, 0.85, 0.35), 1.18),
+        // Translucent ice-blue, medium.
+        Ghost => (Color::srgba(0.55, 0.75, 1.0, 0.62), 0.95),
+    }
+}

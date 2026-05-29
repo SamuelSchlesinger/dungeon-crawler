@@ -32,7 +32,7 @@ fn main() {
         )
         .add_systems(
             EguiPrimaryContextPass,
-            hud.run_if(in_state(GameState::Playing)),
+            (hud, minimap, objective_arrow).run_if(in_state(GameState::Playing)),
         )
         .add_systems(OnEnter(GameState::Playing), setup_play)
         // Real-time action core. Everything is delta-time driven and runs each
@@ -68,6 +68,7 @@ fn main() {
                 hit_flash,
                 update_transient_visuals,
                 update_particles,
+                update_damage_numbers,
                 animate_sprites,
                 display_health.after(enemy_move),
                 // Fog of war (reads synced grid positions).

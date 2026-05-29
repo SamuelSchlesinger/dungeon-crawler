@@ -10,18 +10,21 @@ use crate::components::*;
 pub fn hit_flash(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut HitFlash, &mut Sprite)>,
+    mut query: Query<(Entity, &mut HitFlash, &mut Sprite, Option<&ActorBaseColor>)>,
 ) {
-    for (entity, mut flash, mut sprite) in query.iter_mut() {
+    for (entity, mut flash, mut sprite, base) in query.iter_mut() {
+        // Restore to the actor's resting tint (per-type enemy color / player
+        // white), not a hardcoded white, so type tints survive the flash.
+        let base_color = base.map(|b| b.0).unwrap_or(Color::WHITE);
         flash.0.tick(time.delta());
         if flash.0.is_finished() {
-            sprite.color = Color::WHITE;
+            sprite.color = base_color;
             commands.entity(entity).remove::<HitFlash>();
         } else {
-            // Strongest red at the start, fading back toward white.
+            // Strongest red at the start, fading back toward the base color.
             let remaining = 1.0 - flash.0.fraction();
             let red = Color::srgb(1.0, 0.25, 0.25);
-            sprite.color = Color::WHITE.mix(&red, remaining * 0.85);
+            sprite.color = base_color.mix(&red, remaining * 0.85);
         }
     }
 }
