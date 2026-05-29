@@ -33,3 +33,16 @@ pub fn cleanup_collected_health(
     }
     *healths = new_healths;
 }
+
+/// Removes despawned/collected weapon drops from the WeaponDrops resource.
+/// Runs after pickup_weapon to keep the resource in sync with live entities.
+pub fn cleanup_weapon_drops(
+    mut weapon_drops: ResMut<WeaponDrops>,
+    weapon_query: Query<(Entity, &Position), With<WeaponDrop>>,
+) {
+    let mut new_drops = WeaponDrops::new();
+    for (entity, position) in weapon_query.iter() {
+        new_drops.insert(*position, entity);
+    }
+    *weapon_drops = new_drops;
+}

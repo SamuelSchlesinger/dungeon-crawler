@@ -5,12 +5,14 @@ use crate::resources::*;
 
 /// Updates the target indicator to show which enemy the player will attack
 /// based on mouse position. Highlights the closest adjacent enemy to the cursor.
+#[allow(clippy::too_many_arguments)]
 pub fn update_target_indicator(
     mut commands: Commands,
     player_query: Query<&Position, With<Player>>,
-    enemy_query: Query<(Entity, &Position, &Transform), With<Enemy>>,
+    enemy_query: Query<(Entity, &Position, &Transform), (With<Enemy>, Without<TargetIndicator>)>,
     mouse_position: Res<MousePosition>,
     scale_factor: Res<ScaleFactor>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<CameraMarker>>,
     mut existing_indicator: Query<(Entity, &mut Transform, &mut Visibility), With<TargetIndicator>>,
     mut targeted_enemies: Query<Entity, With<TargetedEnemy>>,
 ) {
@@ -42,8 +44,19 @@ pub fn update_target_indicator(
         return;
     }
 
-    // Find closest enemy to mouse cursor
-    let mouse_world_pos = Vec2::new(mouse_position.0.x, mouse_position.0.y);
+    // Convert the screen-space cursor position into world coordinates using the
+    // camera. Without this conversion, targeting is wrong whenever the camera is
+    // not centered on the world origin (e.g. while following the player).
+    let mouse_world_pos = match camera_query.iter().next() {
+        Some((camera, camera_transform)) => {
+            match camera.viewport_to_world_2d(camera_transform, mouse_position.0) {
+                Ok(world_pos) => world_pos,
+                // Fall back to the raw cursor position if the conversion fails.
+                Err(_) => mouse_position.0,
+            }
+        }
+        None => mouse_position.0,
+    };
     let closest_enemy = adjacent_enemies
         .iter()
         .min_by(|(_, _, pos_a), (_, _, pos_b)| {

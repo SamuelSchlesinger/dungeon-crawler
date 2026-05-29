@@ -6,8 +6,9 @@ use crate::resources::*;
 pub fn display_health(
     scale_factor: Res<ScaleFactor>,
     floor: Res<Floor>,
+    visible_tiles: Res<VisibleTiles>,
     mut position_health_query: Query<
-        (Entity, &Position, &Health, &OriginalHealth),
+        (Entity, &Position, &Health, &OriginalHealth, Has<Enemy>),
         Or<(With<Enemy>, With<Player>)>,
     >,
     mut health_query: Query<
@@ -15,10 +16,14 @@ pub fn display_health(
         (Without<Enemy>, Without<Player>, Without<CameraMarker>),
     >,
 ) {
-    for (entity, position, health, original_health) in position_health_query.iter_mut() {
+    for (entity, position, health, original_health, is_enemy) in position_health_query.iter_mut() {
         for (health_bar, mut visibility, mut sprite, mut transform) in health_query.iter_mut() {
             if entity == health_bar.0 {
-                *visibility = if position.z == floor.0 {
+                // On the current floor, and (for enemies) only when in line of
+                // sight so fog-hidden enemies don't reveal themselves via bars.
+                let on_floor = position.z == floor.0;
+                let visible = on_floor && (!is_enemy || visible_tiles.0.contains(position));
+                *visibility = if visible {
                     Visibility::Visible
                 } else {
                     Visibility::Hidden

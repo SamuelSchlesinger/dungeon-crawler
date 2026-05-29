@@ -40,7 +40,7 @@ pub fn walk_enemies(
 
                 // attack!
                 if position.is_adjacent_to(*player_position) && !should_retreat {
-                    return;
+                    continue;
                 }
                 // random motion
                 if rand::random() && rand::random() && rand::random() {
@@ -69,9 +69,9 @@ pub fn walk_enemies(
                         .collect();
                     if !potential_positions.is_empty() {
                         *position = potential_positions
-                            [rand::random::<usize>() % potential_positions.len()];
+                            [rand::random_range(0..potential_positions.len())];
                         enemies.insert(*position, entity);
-                        return;
+                        continue;
                     }
                 }
                 if movement_path.age >= 5
@@ -101,7 +101,7 @@ pub fn walk_enemies(
                     }
                     movement_path.age = 0;
                 }
-                movement_path.age += rand::random::<usize>() % 3;
+                movement_path.age += rand::random_range(0..3usize);
                 if let Some(ref mut path) = &mut movement_path.path {
                     if let Some(next_vertex) = path.pop_front() {
                         let adjacency = position.is_adjacent_to(next_vertex);

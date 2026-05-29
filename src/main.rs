@@ -8,16 +8,27 @@ mod systems;
 mod utils;
 
 use bevy::prelude::*;
+use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use state::GameState;
 use systems::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(EguiPlugin::default())
         .init_state::<GameState>()
         .insert_resource(Time::<Fixed>::from_hz(30.0))
         .add_systems(Startup, setup)
-        .add_systems(Update, menu.run_if(in_state(GameState::Menu)))
+        .add_systems(
+            EguiPrimaryContextPass,
+            menu.run_if(in_state(GameState::Menu)),
+        )
+        .add_systems(
+            EguiPrimaryContextPass,
+            end_screen.run_if(
+                in_state(GameState::Victory).or(in_state(GameState::Defeat)),
+            ),
+        )
         .add_systems(OnEnter(GameState::Playing), setup_play)
         .add_systems(
             FixedUpdate,
@@ -29,6 +40,7 @@ fn main() {
                 combat,
                 cleanup_dead_enemies,
                 cleanup_collected_health,
+                cleanup_weapon_drops,
                 victory,
                 defeat,
             ).run_if(in_state(GameState::Playing)),
@@ -40,13 +52,17 @@ fn main() {
                 move_player,
                 set_follow,
                 health,
-                set_visibility,
+                pickup_weapon,
+                fog_of_war,
+                set_visibility.after(fog_of_war),
                 track_mouse_movement,
                 update_target_indicator,
                 update_particles,
             ).run_if(in_state(GameState::Playing)),
         )
+        .add_systems(OnEnter(GameState::NextFloor), next_floor)
         .add_systems(OnEnter(GameState::Victory), on_victory)
         .add_systems(OnEnter(GameState::Defeat), on_defeat)
+        .add_systems(Update, restart)
         .run();
 }

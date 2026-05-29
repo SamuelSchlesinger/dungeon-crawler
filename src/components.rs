@@ -118,10 +118,43 @@ pub struct MovementPath {
 }
 
 #[derive(Component)]
-pub struct Menu;
-
-#[derive(Component)]
 pub struct HealthGain;
+
+/// Marker for a dropped weapon pickup lying on the floor.
+#[derive(Component)]
+pub struct WeaponDrop;
+
+/// Stats granted by a weapon pickup. Names come from a small fixed table.
+#[derive(Component, Debug, Clone)]
+pub struct WeaponStats {
+    pub strength_bonus: i64,
+    pub name: &'static str,
+}
+
+/// Fixed table of weapons that can drop from enemies. The sprite index reuses an
+/// existing tilesheet icon (a sword-like glyph) so no new assets are required.
+pub const WEAPON_TABLE: &[(&str, i64)] = &[
+    ("Rusty Dagger", 1),
+    ("Iron Sword", 2),
+    ("Steel Mace", 3),
+    ("War Axe", 4),
+    ("Enchanted Blade", 6),
+];
+
+impl WeaponStats {
+    /// Pick a random weapon from the fixed table.
+    pub fn random() -> Self {
+        let (name, strength_bonus) = WEAPON_TABLE[rand::random_range(0..WEAPON_TABLE.len())];
+        WeaponStats {
+            strength_bonus,
+            name,
+        }
+    }
+}
+
+/// Sprite index used to render weapon drops on the floor. Reuses an existing
+/// tilesheet glyph (same row family as the player sprite).
+pub const WEAPON_SPRITE_INDEX: usize = 24 * 64 + 41;
 
 #[derive(Component)]
 pub struct TargetIndicator;

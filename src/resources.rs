@@ -62,6 +62,24 @@ impl Healths {
     }
 }
 
+/// Tracks dropped weapon pickups by grid position, mirroring `Healths`.
+#[derive(Debug, Resource)]
+pub struct WeaponDrops(pub BTreeMap<Position, Entity>);
+
+impl WeaponDrops {
+    pub fn new() -> Self {
+        WeaponDrops(BTreeMap::new())
+    }
+
+    pub fn insert(&mut self, position: Position, entity: Entity) {
+        self.0.insert(position, entity);
+    }
+
+    pub fn remove(&mut self, position: Position) -> Option<Entity> {
+        self.0.remove(&position)
+    }
+}
+
 #[derive(Debug, Resource)]
 pub struct Enemies {
     entity_positions: BTreeMap<Entity, Position>,
@@ -70,6 +88,38 @@ pub struct Enemies {
 
 #[derive(Debug, Resource)]
 pub struct SpriteTexture(pub (Handle<Image>, Handle<TextureAtlasLayout>));
+
+/// Set of every tile position the player has ever seen (line-of-sight history).
+/// Used by the fog-of-war system: revealed tiles stay rendered, but enemies are
+/// only shown when currently within line of sight.
+#[derive(Debug, Resource, Default)]
+pub struct Revealed(pub BTreeSet<Position>);
+
+impl Revealed {
+    pub fn new() -> Self {
+        Revealed(BTreeSet::new())
+    }
+}
+
+/// Set of tiles currently within the player's line of sight this frame. Rebuilt
+/// every frame by the fog system and consumed by `set_visibility`.
+#[derive(Debug, Resource, Default)]
+pub struct VisibleTiles(pub BTreeSet<Position>);
+
+impl VisibleTiles {
+    pub fn new() -> Self {
+        VisibleTiles(BTreeSet::new())
+    }
+}
+
+/// Player stats carried across floors during a multi-floor roguelike run.
+/// When present, `setup_play` uses these instead of the map's defaults so the
+/// player keeps their current health and accumulated strength between floors.
+#[derive(Debug, Resource, Clone, Copy)]
+pub struct CarryOver {
+    pub health: i64,
+    pub strength: i64,
+}
 
 #[derive(Debug, Resource, Clone)]
 pub struct Statistics {
@@ -160,7 +210,7 @@ fn test_enemies() {
                 y: (i / 4) as i64,
                 z: (i / 4) as i64,
             },
-            Entity::from_raw(i),
+            Entity::from_raw_u32(i).unwrap(),
         );
     }
     for i in 0..30u32 {
@@ -170,7 +220,7 @@ fn test_enemies() {
                 y: (i / 4 + 1) as i64,
                 z: (i / 4 + 1) as i64,
             },
-            Entity::from_raw(i),
+            Entity::from_raw_u32(i).unwrap(),
         );
     }
 }
