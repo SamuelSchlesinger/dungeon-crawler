@@ -129,20 +129,23 @@ pub fn move_player(
     }
 }
 
-/// True if a circle of `radius` centered at `world` would overlap any solid
-/// (non-passable or off-map) tile. Samples the four cardinal extents of the
-/// circle, which is plenty for a one-tile-grained grid.
+/// True if the player's collision box (a square of half-extent `radius` centered
+/// at `world`) would overlap any solid (non-passable) or off-map (untiled) tile.
+///
+/// Checks EVERY grid tile the box overlaps, not just a few sample points. The old
+/// 4-cardinal-point probe missed wall corners on the diagonal, letting the player
+/// clip through corners and escape the dungeon into the empty void. Enumerating
+/// the covered tiles is corner-proof for any radius.
 fn blocked(world: Vec2, radius: f32, tiles: &Tiles, scale: f32, z: i64) -> bool {
-    let probes = [
-        Vec2::new(world.x + radius, world.y),
-        Vec2::new(world.x - radius, world.y),
-        Vec2::new(world.x, world.y + radius),
-        Vec2::new(world.x, world.y - radius),
-    ];
-    probes.iter().any(|p| {
-        let tile = world_to_grid(*p, scale, z);
-        tiles
-            .get(&tile)
-            .is_none_or(|cached| !cached.passable)
-    })
+    let min = world_to_grid(Vec2::new(world.x - radius, world.y - radius), scale, z);
+    let max = world_to_grid(Vec2::new(world.x + radius, world.y + radius), scale, z);
+    for gx in min.x..=max.x {
+        for gy in min.y..=max.y {
+            let tile = Position::new(gx, gy, z);
+            if tiles.get(&tile).is_none_or(|cached| !cached.passable) {
+                return true;
+            }
+        }
+    }
+    false
 }
