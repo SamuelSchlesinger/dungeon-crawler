@@ -35,6 +35,7 @@ pub fn menu(
         commands.insert_resource(Gold::default());
         commands.insert_resource(ActiveWeapon::default());
         commands.insert_resource(AcquiredBoons::default());
+        commands.insert_resource(BoonOffer::default());
         commands.remove_resource::<CarryOver>();
         next_state.set(GameState::Playing);
     };

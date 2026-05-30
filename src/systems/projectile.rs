@@ -206,7 +206,6 @@ pub fn move_projectiles(
                                 &mut weapon_drops,
                                 &sprite_texture,
                                 &health_bars,
-                                floor.0,
                                 *enemy_type,
                                 scale,
                             );
@@ -294,13 +293,13 @@ pub fn on_enemy_killed(
     weapon_drops: &mut WeaponDrops,
     sprite_texture: &SpriteTexture,
     health_bars: &Query<(Entity, &HealthBar)>,
-    floor: i64,
     enemy_type: EnemyType,
     scale: f32,
 ) {
     // A dying bomber detonates: spawn an explosion + ring visual.
     if enemy_type == EnemyType::Bomber {
-        let dmg = ((enemy_type.get_stats(floor.max(0)).1 as f32) * tuning::BOMBER_DAMAGE_MULT)
+        let dmg = ((enemy_type.get_stats(statistics.floors_completed.max(0)).1 as f32)
+            * tuning::BOMBER_DAMAGE_MULT)
             .round()
             .max(1.0) as i64;
         commands.spawn((Explosion {
@@ -338,7 +337,8 @@ pub fn on_enemy_killed(
 
     // Gold reward, scaled by run depth, with a floating "+N" number + a small
     // gold sparkle.
-    let reward = tuning::GOLD_PER_KILL_BASE + tuning::GOLD_PER_KILL_FLOOR_BONUS * floor.max(0);
+    let reward = tuning::GOLD_PER_KILL_BASE
+        + tuning::GOLD_PER_KILL_FLOOR_BONUS * statistics.floors_completed.max(0);
     gold.0 += reward;
     crate::systems::damage_numbers::spawn_gold_number(commands, world, reward);
     spawn_particle(commands, ParticleType::GoldPickup, Vec3::new(world.x, world.y, 0.055));

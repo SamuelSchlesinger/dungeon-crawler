@@ -19,7 +19,6 @@ fn main() {
     app.add_plugins(DefaultPlugins)
         .add_plugins(EguiPlugin::default())
         .init_state::<GameState>()
-        .insert_resource(Time::<Fixed>::from_hz(30.0))
         // Wave 5 juice + audio plumbing.
         .init_resource::<Juice>()
         .add_message::<SfxEvent>()

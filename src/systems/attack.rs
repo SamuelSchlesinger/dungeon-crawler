@@ -31,7 +31,6 @@ pub fn player_attack(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_position: Res<MousePosition>,
     scale_factor: Res<ScaleFactor>,
-    floor: Res<Floor>,
     mut rewards: KillRewards,
     mut juice: ResMut<Juice>,
     mut sfx: MessageWriter<SfxEvent>,
@@ -100,7 +99,6 @@ pub fn player_attack(
             &mut sfx,
             &mut enemy_query,
             &health_bars,
-            floor.0,
         ),
         WeaponType::Ranged => fire_projectiles(
             &mut commands,
@@ -123,7 +121,6 @@ pub fn player_attack(
             &mut sfx,
             &mut enemy_query,
             &health_bars,
-            floor.0,
         ),
     }
 }
@@ -156,7 +153,6 @@ fn melee_swing(
         (With<Enemy>, Without<Player>),
     >,
     health_bars: &Query<(Entity, &HealthBar)>,
-    floor: i64,
 ) {
     let range = stats.effective_attack_range() * scale;
     let cos_half = stats.effective_attack_half_angle().cos();
@@ -212,7 +208,6 @@ fn melee_swing(
                 &mut rewards.weapon_drops,
                 &rewards.sprite_texture,
                 health_bars,
-                floor,
                 *enemy_type,
                 scale,
             );
@@ -291,7 +286,6 @@ fn aoe_burst(
         (With<Enemy>, Without<Player>),
     >,
     health_bars: &Query<(Entity, &HealthBar)>,
-    floor: i64,
 ) {
     let radius = tuning::AOE_RADIUS_TILES * scale;
     let knockback_impulse = tuning::AOE_KNOCKBACK_TILES * scale * stats.knockback_mult;
@@ -343,7 +337,6 @@ fn aoe_burst(
                 &mut rewards.weapon_drops,
                 &rewards.sprite_texture,
                 health_bars,
-                floor,
                 *enemy_type,
                 scale,
             );
