@@ -139,7 +139,7 @@ pub fn enemy_move(
         if need_path {
             repath.0 = Timer::from_seconds(tuning::ENEMY_REPATH_INTERVAL, TimerMode::Once);
             movement_path.path = if should_chase {
-                find_shortest_path(&tiles, &enemies_res, *position, *player_grid)
+                find_shortest_path(&tiles, *position, *player_grid)
             } else if should_retreat {
                 // Pick a passable tile directly away from the player.
                 let away = Position {
@@ -147,7 +147,7 @@ pub fn enemy_move(
                     y: position.y + (position.y - player_grid.y).signum(),
                     z: position.z,
                 };
-                find_shortest_path(&tiles, &enemies_res, *position, away)
+                find_shortest_path(&tiles, *position, away)
             } else {
                 None
             };
@@ -204,16 +204,20 @@ fn apply_move(world_pos: &mut WorldPos, delta: Vec2, tiles: &Tiles, scale: f32, 
 }
 
 fn blocked(world: Vec2, radius: f32, tiles: &Tiles, scale: f32, z: i64) -> bool {
-    let probes = [
-        Vec2::new(world.x + radius, world.y),
-        Vec2::new(world.x - radius, world.y),
-        Vec2::new(world.x, world.y + radius),
-        Vec2::new(world.x, world.y - radius),
-    ];
-    probes.iter().any(|p| {
-        let tile = world_to_grid(*p, scale, z);
-        tiles.get(&tile).is_none_or(|cached| !cached.passable)
-    })
+    // Box-overlap (every tile the actor's box covers), matching the player's
+    // collision. The old 4-cardinal-probe missed wall corners on the diagonal,
+    // letting enemies clip through corners.
+    let min = world_to_grid(Vec2::new(world.x - radius, world.y - radius), scale, z);
+    let max = world_to_grid(Vec2::new(world.x + radius, world.y + radius), scale, z);
+    for gx in min.x..=max.x {
+        for gy in min.y..=max.y {
+            let tile = Position::new(gx, gy, z);
+            if tiles.get(&tile).is_none_or(|cached| !cached.passable) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Re-derive grid `Position`, drive the transform, and keep the `Enemies`
@@ -237,19 +241,18 @@ fn sync(
 
 fn find_shortest_path(
     tiles: &Tiles,
-    enemies: &Enemies,
     starting_position: Position,
     ending_position: Position,
 ) -> Option<VecDeque<Position>> {
+    // Path over ALL passable tiles, ignoring enemy occupancy. Enemies don't
+    // physically collide with each other, and excluding occupied tiles made one
+    // enemy standing in a 1-tile-wide corridor block the A* path of every enemy
+    // behind it -- the whole pack stalled. Occupancy is irrelevant to reachability.
     let all_passable_tile_positions: BTreeSet<Position> = tiles
         .0
         .iter()
         .filter_map(|(position, cached_tile)| {
-            // Allow the enemy's own start/end tiles even if "occupied" by itself.
-            let blocked_by_other = enemies.occupied_position(*position)
-                && *position != starting_position
-                && *position != ending_position;
-            if cached_tile.passable && !blocked_by_other {
+            if cached_tile.passable {
                 Some(*position)
             } else {
                 None

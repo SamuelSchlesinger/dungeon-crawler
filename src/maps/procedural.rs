@@ -164,7 +164,7 @@ pub fn procedural() -> Map {
         let hx = r.x + rand::random_range(0..r.w);
         let hy = r.y + rand::random_range(0..r.h);
         let pos = Position::new(hx, hy, Z);
-        if pos == start {
+        if pos == start || pos == victory_position {
             continue;
         }
         room.add_health(
