@@ -33,7 +33,7 @@ pub fn next_floor(
     // Carry the player's current health/strength to the next floor. Give a small
     // heal on descent so deep runs stay survivable without fully resetting HP.
     if let Some((health, strength)) = player_query.iter().next() {
-        const DESCENT_HEAL: i64 = 20;
+        const DESCENT_HEAL: i64 = 12;
         commands.insert_resource(CarryOver {
             health: health.0 + DESCENT_HEAL,
             strength: strength.0,

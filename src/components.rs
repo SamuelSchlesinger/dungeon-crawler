@@ -97,7 +97,7 @@ pub enum EnemyType {
 impl EnemyType {
     pub fn get_stats(&self, floor: i64) -> (i64, i64) {
         // Returns (health, strength) scaled by floor
-        let floor_multiplier = 1.0 + (floor as f32 * 0.15);  // 15% increase per floor
+        let floor_multiplier = 1.0 + (floor as f32 * 0.18);  // 18% increase per floor
         let base_stats = match self {
             EnemyType::Skeleton => (3, 1),   // Fast but fragile
             EnemyType::Orc => (7, 2),        // Balanced

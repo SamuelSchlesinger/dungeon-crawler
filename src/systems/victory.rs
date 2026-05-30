@@ -7,7 +7,7 @@ use crate::state::GameState;
 
 /// Maximum number of floors cleared in a single run before reaching real
 /// Victory. After clearing this many floors the run ends in a win.
-const RUN_FLOOR_CAP: i64 = 8;
+const RUN_FLOOR_CAP: i64 = 10;
 
 pub fn victory(
     map: Res<Map>,
