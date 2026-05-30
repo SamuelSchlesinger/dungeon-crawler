@@ -24,7 +24,6 @@ pub fn reap_dead_enemies(
     mut gold: ResMut<Gold>,
     mut juice: ResMut<Juice>,
     mut sfx: MessageWriter<SfxEvent>,
-    floor: Res<Floor>,
     scale_factor: Res<ScaleFactor>,
     enemy_query: Query<(Entity, &WorldPos, &Health, &EnemyType), With<Enemy>>,
     health_bars: Query<(Entity, &HealthBar)>,
@@ -37,7 +36,7 @@ pub fn reap_dead_enemies(
 
         // A dying bomber detonates: spawn an explosion + ring visual.
         if *enemy_type == EnemyType::Bomber {
-            let dmg = ((enemy_type.get_stats(floor.0.max(0)).1 as f32)
+            let dmg = ((enemy_type.get_stats(statistics.floors_completed.max(0)).1 as f32)
                 * tuning::BOMBER_DAMAGE_MULT)
                 .round()
                 .max(1.0) as i64;
@@ -83,7 +82,7 @@ pub fn reap_dead_enemies(
         statistics.enemies_killed += 1;
 
         let reward = crate::tuning::GOLD_PER_KILL_BASE
-            + crate::tuning::GOLD_PER_KILL_FLOOR_BONUS * floor.0.max(0);
+            + crate::tuning::GOLD_PER_KILL_FLOOR_BONUS * statistics.floors_completed.max(0);
         gold.0 += reward;
         crate::systems::damage_numbers::spawn_gold_number(&mut commands, world.0, reward);
 
