@@ -215,14 +215,15 @@ pub fn setup_play(
     let exit_position = arrival_target(&test_map.victory_condition);
     commands.insert_resource(ObjectiveMarker(exit_position));
 
+    // Reposition the camera onto the new floor's spawn. The camera is spawned
+    // once at Startup and never despawned, so it's always present -- but don't
+    // panic if it somehow isn't (graceful no-op instead of a hard crash).
     if let Some(mut transform) = camera.iter_mut().next() {
         transform.translation = Vec3::new(
             room.initial_position.x as f32 * scale_factor.0,
             room.initial_position.y as f32 * scale_factor.0,
             transform.translation.z,
-        )
-    } else {
-        panic!("no camera");
+        );
     }
 
     floor.0 = room.initial_position.z;
