@@ -172,7 +172,7 @@ pub const BOMBER_KNOCKBACK_TILES: f32 = 14.0;
 /// `floors_completed + 1`) is a multiple of this.
 pub const BOSS_FLOOR_INTERVAL: i64 = 5;
 /// Boss base HP, before floor scaling (multiplied like normal enemies).
-pub const BOSS_BASE_HP: i64 = 120;
+pub const BOSS_BASE_HP: i64 = 150;
 /// Boss base strength, before floor scaling.
 pub const BOSS_BASE_STRENGTH: i64 = 6;
 /// Sprite scale multiplier for the boss (large, imposing).
