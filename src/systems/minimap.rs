@@ -99,9 +99,10 @@ pub fn minimap(
                 painter.rect_filled(cell_rect(p.x, p.y), 0.0, color);
             }
 
-            // Exit / objective tile (only if it's on this floor & explored-or-known).
+            // Exit / objective tile -- only once the player has actually seen it
+            // (gated on fog, so the minimap doesn't reveal the exit from frame 1).
             if let Some(exit) = objective.0 {
-                if exit.z == z {
+                if exit.z == z && revealed.0.contains(&exit) {
                     painter.rect_filled(
                         cell_rect(exit.x, exit.y),
                         0.0,

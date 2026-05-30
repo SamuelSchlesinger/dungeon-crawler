@@ -387,6 +387,9 @@ impl Enemies {
         self.position_entities.get(&position)
     }
 
+    // No longer used by pathfinding (enemies path through each other to avoid
+    // corridor stalls), but kept for potential callers/tests.
+    #[allow(dead_code)]
     pub fn occupied_position(&self, position: Position) -> bool {
         self.position_entities
             .get(&position)

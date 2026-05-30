@@ -83,16 +83,19 @@ fn apply_move(world_pos: &mut WorldPos, delta: Vec2, tiles: &Tiles, scale: f32, 
 }
 
 fn blocked(world: Vec2, radius: f32, tiles: &Tiles, scale: f32, z: i64) -> bool {
-    let probes = [
-        Vec2::new(world.x + radius, world.y),
-        Vec2::new(world.x - radius, world.y),
-        Vec2::new(world.x, world.y + radius),
-        Vec2::new(world.x, world.y - radius),
-    ];
-    probes.iter().any(|p| {
-        let tile = world_to_grid(*p, scale, z);
-        tiles.get(&tile).is_none_or(|c| !c.passable)
-    })
+    // Box-overlap collision (matches enemy_ai / move_player); corner-proof so
+    // chargers/boss can't clip through wall corners.
+    let min = world_to_grid(Vec2::new(world.x - radius, world.y - radius), scale, z);
+    let max = world_to_grid(Vec2::new(world.x + radius, world.y + radius), scale, z);
+    for gx in min.x..=max.x {
+        for gy in min.y..=max.y {
+            let tile = Position::new(gx, gy, z);
+            if tiles.get(&tile).is_none_or(|c| !c.passable) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// True if a step from `from` to `to` would cross a solid tile (cheap sampled
