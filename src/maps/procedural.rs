@@ -327,12 +327,12 @@ fn carve_v_corridor(floor: &mut BTreeSet<Position>, y1: i64, y2: i64, x: i64) {
 
 /// Give the player enough HP to plausibly survive the level's total enemy damage
 /// while still being threatened. Scales with total enemy HP.
-fn compute_reasonable_player_health(total_enemy_hp: i64) -> u64 {
-    (total_enemy_hp * 5 / 2).clamp(50, 2000) as u64
+pub(crate) fn compute_reasonable_player_health(total_enemy_hp: i64) -> u64 {
+    (total_enemy_hp * 9 / 5).clamp(50, 2000) as u64
 }
 
 /// Strength scaled so the player can clear the level in a reasonable number of
 /// hits without trivializing tanky enemies.
-fn compute_reasonable_player_strength(total_enemy_hp: i64) -> u64 {
+pub(crate) fn compute_reasonable_player_strength(total_enemy_hp: i64) -> u64 {
     (3 + total_enemy_hp / 20).clamp(3, 30) as u64
 }

@@ -1,5 +1,5 @@
 mod avoidance;
-mod procedural;
+pub(crate) mod procedural;
 mod unbeatable;
 
 pub use avoidance::avoidance;

@@ -8,6 +8,9 @@ mod systems;
 mod tuning;
 mod utils;
 
+#[cfg(test)]
+mod balance_sim;
+
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use resources::{Juice, SfxEvent};
