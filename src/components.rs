@@ -99,12 +99,12 @@ impl EnemyType {
         // Returns (health, strength) scaled by floor
         let floor_multiplier = 1.0 + (floor as f32 * 0.18);  // 18% increase per floor
         let base_stats = match self {
-            EnemyType::Skeleton => (3, 1),   // Fast but fragile
-            EnemyType::Orc => (7, 2),        // Balanced
-            EnemyType::Ghost => (10, 3),     // Strong and tanky
-            EnemyType::Archer => (5, 2),     // Fragile-ish ranged attacker
-            EnemyType::Charger => (12, 3),   // Tanky bruiser
-            EnemyType::Bomber => (4, 2),     // Fragile; the threat is the boom
+            EnemyType::Skeleton => (3, 2),   // Fast but fragile
+            EnemyType::Orc => (7, 3),        // Balanced
+            EnemyType::Ghost => (10, 4),     // Strong and tanky
+            EnemyType::Archer => (5, 3),     // Fragile-ish ranged attacker
+            EnemyType::Charger => (12, 4),   // Tanky bruiser
+            EnemyType::Bomber => (4, 3),     // Fragile; the threat is the boom
             EnemyType::Boss => (
                 crate::tuning::BOSS_BASE_HP,
                 crate::tuning::BOSS_BASE_STRENGTH,

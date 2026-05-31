@@ -89,7 +89,7 @@ pub const ENEMY_ATTACK_RANGE_TILES: f32 = 1.1;
 pub const ENEMY_TELEGRAPH: f32 = 0.3;
 
 /// Cooldown between enemy attacks, in seconds.
-pub const ENEMY_ATTACK_COOLDOWN: f32 = 1.0;
+pub const ENEMY_ATTACK_COOLDOWN: f32 = 0.85;
 
 /// Knockback applied to the player when an enemy hits, in tiles/sec.
 pub const ENEMY_KNOCKBACK_TILES: f32 = 6.0;
@@ -172,9 +172,9 @@ pub const BOMBER_KNOCKBACK_TILES: f32 = 14.0;
 /// `floors_completed + 1`) is a multiple of this.
 pub const BOSS_FLOOR_INTERVAL: i64 = 5;
 /// Boss base HP, before floor scaling (multiplied like normal enemies).
-pub const BOSS_BASE_HP: i64 = 150;
+pub const BOSS_BASE_HP: i64 = 200;
 /// Boss base strength, before floor scaling.
-pub const BOSS_BASE_STRENGTH: i64 = 6;
+pub const BOSS_BASE_STRENGTH: i64 = 7;
 /// Sprite scale multiplier for the boss (large, imposing).
 pub const BOSS_SCALE: f32 = 2.4;
 /// Boss tint (deep menacing red/purple).
