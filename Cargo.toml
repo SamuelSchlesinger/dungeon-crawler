@@ -6,6 +6,18 @@ include = ["/assets, README.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# Size-optimized release profile. The web build commits web-build/ into the repo
+# (GitHub Pages serves it), so the wasm must stay under GitHub's 100MB file limit.
+# A default release build of Bevy + bevy_egui produces a ~98MB wasm (106MB after
+# wasm-bindgen). LTO + strip do most of the work; this also makes the live site
+# load substantially faster. wasm-opt -Oz in build-for-web shrinks it further.
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+
 [dependencies]
 bevy = "0.17"
 serde = "1.0"

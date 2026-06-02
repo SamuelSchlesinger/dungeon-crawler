@@ -1,3 +1,29 @@
 #!/bin/bash
-wasm-bindgen --out-dir ./web-build --target web ./target/wasm32-unknown-unknown/release/dungeon-crawler.wasm
+set -euo pipefail
+
+# 1. Compile the wasm. The size-optimized [profile.release] in Cargo.toml keeps
+#    the artifact small enough to commit (GitHub rejects files over 100MB).
 cargo build --target wasm32-unknown-unknown --release
+
+# 2. Generate the JS glue + wasm bindings into web-build/ (served by GitHub Pages).
+wasm-bindgen --out-dir ./web-build --target web \
+    ./target/wasm32-unknown-unknown/release/dungeon-crawler.wasm
+
+# 3. Shrink the wasm with wasm-opt (-Oz: aggressive size optimization). This keeps
+#    web-build/dungeon-crawler_bg.wasm well under GitHub's 100MB limit and speeds
+#    up the live site. Skipped with a warning if wasm-opt isn't installed.
+if command -v wasm-opt >/dev/null 2>&1; then
+    # The wasm feature flags must be enabled explicitly: modern rustc emits
+    # bulk-memory (memory.copy), sign-ext, etc., and wasm-opt validates against
+    # the MVP unless told otherwise.
+    wasm-opt -Oz --strip-debug \
+        --enable-bulk-memory --enable-bulk-memory-opt --enable-sign-ext \
+        --enable-mutable-globals --enable-nontrapping-float-to-int \
+        --enable-reference-types --enable-multivalue \
+        -o ./web-build/dungeon-crawler_bg.opt.wasm \
+        ./web-build/dungeon-crawler_bg.wasm
+    mv ./web-build/dungeon-crawler_bg.opt.wasm ./web-build/dungeon-crawler_bg.wasm
+    echo "wasm-opt done: $(du -h ./web-build/dungeon-crawler_bg.wasm | cut -f1)"
+else
+    echo "wasm-opt not found (brew install binaryen) — skipping size pass." >&2
+fi
